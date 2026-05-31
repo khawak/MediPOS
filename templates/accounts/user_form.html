@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ page_title }} — MediPOS{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-body-tertiary">
+                <h5 class="card-title mb-0">
+                    {% if action == 'Create' %}
+                    <i class="bi bi-person-plus me-2"></i>{{ page_title }}
+                    {% else %}
+                    <i class="bi bi-person-gear me-2"></i>{{ page_title }}
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>
+                            {% if action == 'Create' %}Create User{% else %}Save Changes{% endif %}
+                        </button>
+                        <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

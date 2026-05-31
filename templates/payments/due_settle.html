@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Settle Dues — {{ payee }} — MediPOS{% endblock %}
+
+{% block page_title %}Settle Dues — {{ payee }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Payee Info Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    {% if payee_type == 'customer' %}
+                        <i class="bi bi-person me-1"></i>
+                    {% else %}
+                        <i class="bi bi-box-seam me-1"></i>
+                    {% endif %}
+                    {{ payee }}
+                </h5>
+                <span class="badge {% if payee.balance > 0 %}bg-success{% elif payee.balance < 0 %}bg-danger{% else %}bg-secondary{% endif %} fs-6">
+                    {{ payee.balance_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% if payee_type == 'customer' %}
+                        <div class="col-md-6">
+                            <small class="text-muted">Phone</small>
+                            <div class="fw-semibold">{{ payee.phone }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted">Total Purchases</small>
+                            <div class="fw-semibold">{{ payee.total_purchases }}</div>
+                        </div>
+                    {% else %}
+                        <div class="col-md-6">
+                            <small class="text-muted">Contact Person</small>
+                            <div class="fw-semibold">{{ payee.contact_person|default:'—' }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted">Phone</small>
+                            <div class="fw-semibold">{{ payee.phone }}</div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Outstanding Breakdown -->
+        {% if outstanding_items %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list-ul me-2"></i>
+                    {% if payee_type == 'customer' %}Outstanding Invoices{% else %}Outstanding Purchase Orders{% endif %}
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Reference</th>
+                                <th>Date</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-end">Paid</th>
+                                <th class="text-end">Remaining</th>
+                                <th class="text-end">Settle Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in outstanding_items %}
+                            <tr>
+                                <td class="fw-semibold">{{ item.ref }}</td>
+                                <td class="text-muted small">{{ item.date|date:'d M Y' }}</td>
+                                <td class="text-end">৳ {{ item.total|floatformat:2 }}</td>
+                                <td class="text-end text-success">৳ {{ item.paid|floatformat:2 }}</td>
+                                <td class="text-end fw-bold text-danger">৳ {{ item.remaining|floatformat:2 }}</td>
+                                <td class="text-end">
+                                    <input type="number"
+                                           class="form-control form-control-sm text-end settle-amount"
+                                           style="width: 120px; display: inline-block;"
+                                           step="0.01"
+                                           min="0"
+                                           max="{{ item.remaining }}"
+                                           value="0.00"
+                                           data-max="{{ item.remaining }}"
+                                           id="{% if item.type == 'invoice' %}settle_invoice_{{ item.sale_id }}{% else %}settle_po_{{ item.po_id }}{% endif %}"
+                                           name="{% if item.type == 'invoice' %}settle_invoice_{{ item.sale_id }}{% else %}settle_po_{{ item.po_id }}{% endif %}">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary settle-full-btn"
+                                            data-target="{% if item.type == 'invoice' %}settle_invoice_{{ item.sale_id }}{% else %}settle_po_{{ item.po_id }}{% endif %}"
+                                            data-max="{{ item.remaining }}">
+                                        Full
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="table-light fw-bold">
+                                <td colspan="4" class="text-end">Total Outstanding:</td>
+                                <td class="text-end text-danger">৳ {{ total_outstanding|floatformat:2 }}</td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-danger settle-all-btn">
+                                        Settle All
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-check-circle display-4 text-success d-block mb-3"></i>
+                <h5>All Settled!</h5>
+                <p class="text-muted mb-0">No outstanding dues for this {{ payee_type }}.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Payment Form Card -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-cash-coin me-2"></i>Record Payment
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate id="settle-form">
+                    {% csrf_token %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="amount" class="form-label">Payment Amount <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">৳</span>
+                                <input type="number" name="amount" id="amount" class="form-control"
+                                       step="0.01" min="0.01" placeholder="Enter amount..." required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="transaction_date" class="form-label">Transaction Date</label>
+                            <input type="date" name="transaction_date" id="transaction_date" class="form-control"
+                                   value="{% now 'Y-m-d' %}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="payment_method" class="form-label">Payment Method</label>
+                            <select name="payment_method" id="payment_method" class="form-select">
+                                <option value="CASH">Cash</option>
+                                <option value="BANK">Bank Transfer</option>
+                                <option value="MOBILE">Mobile Banking</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="reference" class="form-label">Reference</label>
+                            <input type="text" name="reference" id="reference" class="form-control"
+                                   placeholder="Cheque #, transaction ID...">
+                        </div>
+                        <div class="col-12">
+                            <label for="note" class="form-label">Note</label>
+                            <textarea name="note" id="note" class="form-control" rows="2"
+                                      placeholder="Optional notes..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-lg me-1"></i> Record Payment
+                        </button>
+                        <a href="{{ payee.get_absolute_url }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar: Payment History -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-cash-stack me-2"></i>Payment History
+                </h6>
+                <a href="{% url 'payments:payment_list' %}?type={{ payee_type }}"
+                   class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_transactions %}
+                <div class="list-group list-group-flush">
+                    {% for tx in recent_transactions %}
+                    <div class="list-group-item px-3 py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-semibold text-success">৳ {{ tx.amount|floatformat:2 }}</span>
+                                <small class="text-muted ms-1">
+                                    {% if tx.transaction_type == 'PAYMENT' %}Payment{% else %}Advance{% endif %}
+                                    · {{ tx.get_payment_method_display }}
+                                </small>
+                            </div>
+                            <small class="text-muted">{{ tx.created_at|date:"M d, Y" }}</small>
+                        </div>
+                        {% if tx.sale %}
+                        <small class="text-primary">Invoice: {{ tx.sale.invoice_no }}</small>
+                        {% elif tx.purchase_order %}
+                        <small class="text-primary">PO: {{ tx.purchase_order.po_number }}</small>
+                        {% endif %}
+                        {% if tx.reference %}
+                        <small class="text-muted d-block">{{ tx.reference }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-cash-coin display-4 text-muted"></i>
+                    <p class="text-muted mt-3 mb-0">No payment transactions yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // "Full" buttons — fill the settle amount with the maximum
+    document.querySelectorAll('.settle-full-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var targetId = this.getAttribute('data-target');
+            var max = this.getAttribute('data-max');
+            var input = document.getElementById(targetId);
+            if (input) {
+                input.value = max;
+            }
+            // Update the Payment Amount field with the sum of all settle amounts
+            var total = 0;
+            document.querySelectorAll('.settle-amount').forEach(function (el) {
+                total += parseFloat(el.value) || 0;
+            });
+            var amountInput = document.getElementById('amount');
+            if (amountInput) {
+                amountInput.value = total.toFixed(2);
+            }
+        });
+    });
+
+    // "Settle All" button — fill all settle amounts with their max
+    var settleAllBtn = document.querySelector('.settle-all-btn');
+    if (settleAllBtn) {
+        settleAllBtn.addEventListener('click', function () {
+            document.querySelectorAll('.settle-amount').forEach(function (input) {
+                input.value = input.getAttribute('data-max');
+            });
+            // Also set the total amount field
+            var total = 0;
+            document.querySelectorAll('.settle-amount').forEach(function (input) {
+                total += parseFloat(input.value) || 0;
+            });
+            var amountInput = document.getElementById('amount');
+            if (amountInput) {
+                amountInput.value = total.toFixed(2);
+            }
+        });
+    }
+
+    // Auto-update the total amount field when settle amounts change
+    document.querySelectorAll('.settle-amount').forEach(function (input) {
+        input.addEventListener('input', function () {
+            var total = 0;
+            document.querySelectorAll('.settle-amount').forEach(function (el) {
+                total += parseFloat(el.value) || 0;
+            });
+            var amountInput = document.getElementById('amount');
+            if (amountInput && total > 0) {
+                amountInput.value = total.toFixed(2);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

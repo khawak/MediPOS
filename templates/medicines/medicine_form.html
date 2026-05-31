@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if object %}Edit Medicine{% else %}Add Medicine{% endif %} — MediPOS
+{% endblock %}
+
+{% block page_title %}
+    {% if object %}Edit Medicine{% else %}Add Medicine{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    {% if object %}
+                        <i class="bi bi-pencil me-2"></i>Edit Medicine: {{ object.name }}
+                    {% else %}
+                        <i class="bi bi-plus-circle me-2"></i>Add New Medicine
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+
+                    <!-- Two-column layout using Bootstrap grid -->
+                    <div class="row g-3">
+                        <!-- Left Column — Basic Info -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted border-bottom pb-2 mb-3">
+                                <i class="bi bi-info-circle me-1"></i>Basic Information
+                            </h6>
+                            {{ form.name|as_crispy_field }}
+                            {{ form.generic_name|as_crispy_field }}
+                            {{ form.brand|as_crispy_field }}
+                            {{ form.category|as_crispy_field }}
+                            {{ form.barcode|as_crispy_field }}
+                            {{ form.unit|as_crispy_field }}
+                        </div>
+
+                        <!-- Right Column — Pricing & Stock -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted border-bottom pb-2 mb-3">
+                                <i class="bi bi-cash-stack me-1"></i>Pricing & Stock
+                            </h6>
+                            {{ form.purchase_price|as_crispy_field }}
+                            {{ form.selling_price|as_crispy_field }}
+                            {{ form.tax_rate|as_crispy_field }}
+                            {{ form.reorder_level|as_crispy_field }}
+
+                            <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">
+                                <i class="bi bi-card-text me-1"></i>Additional Details
+                            </h6>
+                            {{ form.description|as_crispy_field }}
+                            {{ form.is_active|as_crispy_field }}
+                            {{ form.image|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                        <a href="{% url 'medicines:medicine_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Medicines
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>
+                            {% if object %}Update Medicine{% else %}Save Medicine{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

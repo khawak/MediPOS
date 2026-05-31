@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Shop Settings — MediPOS{% endblock %}
+{% block page_title %}Shop Settings{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <div class="card shadow-sm">
+      <div class="card-header bg-body-tertiary">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-gear me-2"></i>General Settings
+        </h5>
+      </div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+
+          <!-- Shop Information Section -->
+          <h6 class="border-bottom pb-2 mb-3 text-primary">
+            <i class="bi bi-shop me-2"></i>Shop Information
+          </h6>
+          <div class="row mb-3">
+            <div class="col-md-6">{{ form.shop_name|as_crispy_field }}</div>
+            <div class="col-md-6">
+              {% if object.shop_logo %}
+                <div class="mb-2">
+                  <img src="{{ object.shop_logo.url }}"
+                       alt="Current Shop Logo"
+                       class="img-thumbnail"
+                       style="max-height: 80px;">
+                </div>
+              {% endif %}
+              {{ form.shop_logo|as_crispy_field }}
+            </div>
+          </div>
+          <div class="mb-3">{{ form.shop_address|as_crispy_field }}</div>
+          <div class="row mb-3">
+            <div class="col-md-6">{{ form.shop_phone|as_crispy_field }}</div>
+            <div class="col-md-6">{{ form.shop_email|as_crispy_field }}</div>
+          </div>
+
+          <!-- Tax & Registration Section -->
+          <h6 class="border-bottom pb-2 mb-3 text-primary mt-4">
+            <i class="bi bi-receipt me-2"></i>Tax & Registration
+          </h6>
+          <div class="row mb-3">
+            <div class="col-md-6">{{ form.tin_number|as_crispy_field }}</div>
+            <div class="col-md-6">{{ form.vat_number|as_crispy_field }}</div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-4">{{ form.default_tax_rate|as_crispy_field }}</div>
+            <div class="col-md-4">{{ form.currency_symbol|as_crispy_field }}</div>
+            <div class="col-md-4">{{ form.currency_code|as_crispy_field }}</div>
+          </div>
+
+          <!-- Inventory & Receipt Section -->
+          <h6 class="border-bottom pb-2 mb-3 text-primary mt-4">
+            <i class="bi bi-boxes me-2"></i>Inventory & Receipt
+          </h6>
+          <div class="mb-3">{{ form.low_stock_threshold|as_crispy_field }}</div>
+          <div class="mb-3">{{ form.receipt_footer|as_crispy_field }}</div>
+
+          <hr>
+          <div class="d-flex justify-content-between">
+            <a href="{% url 'settings:backup' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-database-down me-1"></i>Backup Database
+            </a>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-save me-1"></i>Save Settings
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

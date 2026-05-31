@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Stock Ledger | MediPOS{% endblock %}
+
+{% block page_title %}Stock Ledger / Audit Trail{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Filter Panel -->
+    <div class="card material-card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-funnel me-1"></i> Filters</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">{{ filter.form.search.label }}</label>
+                    {{ filter.form.search }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ filter.form.supplier_search.label }}</label>
+                    {{ filter.form.supplier_search }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ filter.form.transaction_type.label }}</label>
+                    {{ filter.form.transaction_type }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ filter.form.date_from.label }}</label>
+                    {{ filter.form.date_from }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ filter.form.date_to.label }}</label>
+                    {{ filter.form.date_to }}
+                </div>
+                <div class="col-md-1">
+                    <a href="{% url 'inventory:stock_ledger_list' %}" class="btn btn-outline-secondary w-100"
+                       title="Clear Filters">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Ledger Table -->
+    <div class="card material-card" id="ledger-table-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-journal-text me-1"></i> Stock Movements</h6>
+            <span class="badge bg-secondary rounded-pill">{{ page_obj.paginator.count }} entr{{ page_obj.paginator.count|pluralize:"y,ies" }}</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Medicine</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Batch</th>
+                            <th>Reference</th>
+                            <th>Created By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in ledger_entries %}
+                        <tr>
+                            <td class="text-nowrap">{{ entry.created_at|date:'d M Y, h:i A' }}</td>
+                            <td>
+                                <a href="{% url 'medicines:medicine_detail' entry.medicine.pk %}"
+                                   class="text-decoration-none">
+                                    {{ entry.medicine.name }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if entry.transaction_type == 'IN' %}
+                                    <span class="badge bg-success rounded-pill">Stock In</span>
+                                {% elif entry.transaction_type == 'OUT' %}
+                                    <span class="badge bg-primary rounded-pill">Sale</span>
+                                {% elif entry.transaction_type == 'ADJ' %}
+                                    <span class="badge bg-warning text-dark rounded-pill">Adjustment</span>
+                                {% elif entry.transaction_type == 'RET' %}
+                                    <span class="badge bg-info rounded-pill">Return</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if entry.quantity > 0 %}
+                                    <span class="text-success fw-bold">+{{ entry.quantity }}</span>
+                                {% else %}
+                                    <span class="text-danger fw-bold">{{ entry.quantity }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if entry.batch %}
+                                    <a href="{% url 'inventory:batch_detail' entry.batch.pk %}"
+                                       class="badge bg-light text-dark text-decoration-none">
+                                        {{ entry.batch.batch_no }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small">{{ entry.reference|default:'—' }}</td>
+                            <td class="text-muted small">{{ entry.created_by.get_full_name|default:entry.created_by|default:'System' }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="bi bi-journal-x display-4 d-block mb-2"></i>
+                                No stock ledger entries found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="card-footer" id="ledger-pagination">
+            <div class="d-flex justify-content-center align-items-center flex-wrap gap-3">
+                <nav aria-label="Ledger pagination">
+                    <ul class="pagination mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                <span class="badge bg-secondary fs-6">{{ page_obj.paginator.count }} entr{{ page_obj.paginator.count|pluralize:"y,ies" }}</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Back Button -->
+    <div class="mt-3">
+        <a href="{% url 'inventory:batch_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Inventory
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/**
+ * Real-time AJAX filtering for the stock ledger list.
+ *
+ * On each keypress (search, debounced 300ms) or change (transaction type, dates),
+ * fetch the filtered results via AJAX and replace only the table and
+ * pagination sections — keeping filter inputs focused.
+ */
+(function () {
+    const form = document.querySelector('form[method="get"]');
+    if (!form) return;
+
+    const searchInput = form.querySelector('input[name="search"]');
+    const supplierInput = form.querySelector('input[name="supplier_search"]');
+    const typeSelect = form.querySelector('select[name="transaction_type"]');
+    const dateFromInput = form.querySelector('input[name="date_from"]');
+    const dateToInput = form.querySelector('input[name="date_to"]');
+
+    let debounceTimer;
+    let currentController = null;
+
+    function replaceSection(id, newElement) {
+        const existing = document.getElementById(id);
+        if (existing && newElement) {
+            existing.parentNode.replaceChild(newElement, existing);
+        }
+    }
+
+    function updateDOM(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Replace table card
+        replaceSection('ledger-table-card', doc.getElementById('ledger-table-card'));
+
+        // Replace pagination (or remove if none)
+        const oldPagination = document.getElementById('ledger-pagination');
+        const newPagination = doc.getElementById('ledger-pagination');
+        if (oldPagination && newPagination) {
+            oldPagination.parentNode.replaceChild(newPagination, oldPagination);
+        } else if (oldPagination && !newPagination) {
+            oldPagination.remove();
+        } else if (!oldPagination && newPagination) {
+            const tableCard = document.getElementById('ledger-table-card');
+            if (tableCard && tableCard.parentNode) {
+                tableCard.parentNode.appendChild(newPagination);
+            }
+        }
+    }
+
+    function doFetch(params) {
+        if (currentController) {
+            currentController.abort();
+        }
+        currentController = new AbortController();
+
+        const url = window.location.pathname + '?' + params.toString();
+
+        fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            signal: currentController.signal
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error('Network error');
+                return response.text();
+            })
+            .then(function (html) {
+                updateDOM(html);
+                history.replaceState(null, '', url);
+            })
+            .catch(function (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('Filter fetch failed:', err);
+                }
+            });
+    }
+
+    function triggerFilter() {
+        const params = new URLSearchParams(new FormData(form));
+        params.delete('page');
+        doFetch(params);
+    }
+
+    function submitFormPage(pageNum) {
+        const params = new URLSearchParams(new FormData(form));
+        params.set('page', pageNum);
+        doFetch(params);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // --- Event listeners for filter controls ---
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(triggerFilter, 300);
+        });
+    }
+
+    if (supplierInput) {
+        supplierInput.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(triggerFilter, 300);
+        });
+    }
+
+    if (typeSelect) {
+        typeSelect.addEventListener('change', triggerFilter);
+    }
+
+    if (dateFromInput) {
+        dateFromInput.addEventListener('change', triggerFilter);
+    }
+
+    if (dateToInput) {
+        dateToInput.addEventListener('change', triggerFilter);
+    }
+
+    // --- Delegate pagination clicks to AJAX ---
+    document.addEventListener('click', function (e) {
+        var link = e.target.closest('.page-link');
+        if (!link) return;
+        if (!link.closest('#ledger-pagination')) return;
+        e.preventDefault();
+        var href = link.getAttribute('href');
+        if (!href) return;
+        var url = new URL(href, window.location.origin);
+        var page = url.searchParams.get('page');
+        if (page) {
+            submitFormPage(page);
+        }
+    });
+
+})();
+</script>
+{% endblock %}

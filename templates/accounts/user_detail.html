@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ profile_user.get_full_name|default:profile_user.username }} — MediPOS{% endblock %}
+
+{% block page_title %}User Details{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4">
+        <!-- Profile Card -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-body text-center">
+                {% if profile_user.avatar %}
+                <img src="{{ profile_user.avatar.url }}" alt="{{ profile_user.username }}"
+                     class="rounded-circle mb-3" width="120" height="120"
+                     style="object-fit: cover;">
+                {% else %}
+                <div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center mb-3"
+                     style="width: 120px; height: 120px; font-size: 2.5rem;">
+                    {{ profile_user.username|slice:":1"|upper }}
+                </div>
+                {% endif %}
+
+                <h5 class="fw-bold mb-1">{{ profile_user.get_full_name|default:profile_user.username }}</h5>
+                <p class="text-muted small mb-2">@{{ profile_user.username }}</p>
+
+                {% if profile_user.role == 'ADMIN' %}
+                <span class="badge bg-danger fs-6">{{ profile_user.get_role_display }}</span>
+                {% elif profile_user.role == 'PHARMACIST' %}
+                <span class="badge bg-primary fs-6">{{ profile_user.get_role_display }}</span>
+                {% elif profile_user.role == 'CASHIER' %}
+                <span class="badge bg-success fs-6">{{ profile_user.get_role_display }}</span>
+                {% else %}
+                <span class="badge bg-secondary fs-6">{{ profile_user.get_role_display }}</span>
+                {% endif %}
+
+                <hr>
+
+                <div class="text-start small">
+                    <p class="mb-1">
+                        <i class="bi bi-envelope me-2 text-muted"></i>
+                        {{ profile_user.email|default:'No email provided' }}
+                    </p>
+                    <p class="mb-1">
+                        <i class="bi bi-telephone me-2 text-muted"></i>
+                        {{ profile_user.phone|default:'No phone provided' }}
+                    </p>
+                    <p class="mb-0">
+                        {% if profile_user.is_active %}
+                        <i class="bi bi-check-circle me-2 text-success"></i> Active
+                        {% else %}
+                        <i class="bi bi-x-circle me-2 text-danger"></i> Inactive
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <!-- Details Card -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-body-tertiary d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="bi bi-info-circle me-2"></i>Account Information</h5>
+                <div class="btn-group btn-group-sm">
+                    {% if perms.accounts.change_user %}
+                    <a href="{% url 'accounts:user_edit' profile_user.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i> Edit
+                    </a>
+                    {% endif %}
+                    {% if perms.accounts.delete_user and profile_user != request.user %}
+                    <a href="{% url 'accounts:user_delete' profile_user.pk %}" class="btn btn-outline-danger">
+                        <i class="bi bi-person-x me-1"></i> Deactivate
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Back
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Username</dt>
+                    <dd class="col-sm-8">{{ profile_user.username }}</dd>
+
+                    <dt class="col-sm-4">Full Name</dt>
+                    <dd class="col-sm-8">{{ profile_user.get_full_name|default:'—' }}</dd>
+
+                    <dt class="col-sm-4">Email</dt>
+                    <dd class="col-sm-8">{{ profile_user.email|default:'—' }}</dd>
+
+                    <dt class="col-sm-4">Phone</dt>
+                    <dd class="col-sm-8">{{ profile_user.phone|default:'—' }}</dd>
+
+                    <dt class="col-sm-4">Role</dt>
+                    <dd class="col-sm-8">{{ profile_user.get_role_display }}</dd>
+
+                    <dt class="col-sm-4">Staff Status</dt>
+                    <dd class="col-sm-8">
+                        {% if profile_user.is_staff %}
+                        <span class="badge bg-success-subtle text-success">Yes</span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary">No</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-sm-4">Superuser</dt>
+                    <dd class="col-sm-8">
+                        {% if profile_user.is_superuser %}
+                        <span class="badge bg-warning-subtle text-warning">Yes</span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary">No</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-sm-4">Date Joined</dt>
+                    <dd class="col-sm-8">{{ profile_user.date_joined|date:"F d, Y H:i" }}</dd>
+
+                    <dt class="col-sm-4">Last Login</dt>
+                    <dd class="col-sm-8">{{ profile_user.last_login|date:"F d, Y H:i"|default:'Never' }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

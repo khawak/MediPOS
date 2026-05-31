@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Product Sales — MediPOS{% endblock %}
+{% block page_title %}Product Sales Report{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-body-tertiary">
+    <h5 class="card-title mb-0"><i class="bi bi-funnel me-2"></i>Filter Options</h5>
+  </div>
+  <div class="card-body">
+    <form method="post" class="row g-3 align-items-end">
+      {% csrf_token %}
+      <div class="col-md-2">
+        <label for="{{ form.from_date.id_for_label }}" class="form-label">From Date</label>
+        {{ form.from_date }}
+      </div>
+      <div class="col-md-2">
+        <label for="{{ form.to_date.id_for_label }}" class="form-label">To Date</label>
+        {{ form.to_date }}
+      </div>
+      <div class="col-md-3">
+        <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
+        {{ form.category }}
+      </div>
+      <div class="col-md-3">
+        <label for="{{ form.medicine.id_for_label }}" class="form-label">Medicine</label>
+        {{ form.medicine }}
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-search me-1"></i>Generate
+        </button>
+        {% if has_results %}
+        <button type="submit" name="export" value="excel" class="btn btn-outline-success">
+          <i class="bi bi-file-earmark-excel"></i>
+        </button>
+        <button type="submit" name="export" value="pdf" class="btn btn-outline-danger">
+          <i class="bi bi-file-earmark-pdf"></i>
+        </button>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if has_results %}
+<!-- Summary Row -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card shadow-sm border-info">
+      <div class="card-body text-center">
+        <p class="text-muted mb-1 small">Total Quantity Sold</p>
+        <h3 class="mb-0 text-info">{{ total_qty }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm border-success">
+      <div class="card-body text-center">
+        <p class="text-muted mb-1 small">Total Revenue</p>
+        <h3 class="mb-0 text-success">৳ {{ total_revenue|floatformat:2 }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm border-primary">
+      <div class="card-body text-center">
+        <p class="text-muted mb-1 small">Total Profit</p>
+        <h3 class="mb-0 text-primary">৳ {{ total_profit|floatformat:2 }}</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Results Table -->
+<div class="card shadow-sm">
+  <div class="card-header bg-body-tertiary">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-table me-2"></i>Product Sales Breakdown ({{ from_date }} to {{ to_date }})
+    </h5>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-striped table-hover mb-0">
+        <thead class="table-report-header">
+          <tr>
+            <th>Medicine</th>
+            <th>Category</th>
+            <th>Qty Sold</th>
+            <th>Revenue</th>
+            <th>Profit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if results %}
+            {% for item in results %}
+            <tr>
+              <td>{{ item.medicine_name }}</td>
+              <td>{{ item.category }}</td>
+              <td>{{ item.qty_sold }}</td>
+              <td>৳ {{ item.revenue|floatformat:2 }}</td>
+              <td class="{% if item.profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                ৳ {{ item.profit|floatformat:2 }}
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">
+                <i class="bi bi-info-circle me-1"></i>No product sales data found for the selected filters.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+        {% if results %}
+        <tfoot class="table-report-footer">
+          <tr>
+            <th colspan="2">TOTALS</th>
+            <th>{{ total_qty }}</th>
+            <th>৳ {{ total_revenue|floatformat:2 }}</th>
+            <th>৳ {{ total_profit|floatformat:2 }}</th>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="card shadow-sm">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-box-seam display-3 mb-3 d-block"></i>
+    <h5>No Data to Display</h5>
+    <p>Select filters and click "Generate" to view product sales breakdown.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

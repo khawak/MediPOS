@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Return for {{ return_obj.sale.invoice_no }} — MediPOS{% endblock %}
+
+{% block page_title %}Return Details{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'returns:sales_return_list' %}">Returns & Refunds</a></li>
+        <li class="breadcrumb-item active">Return for {{ return_obj.sale.invoice_no }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <!-- Return Info Card -->
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Return Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted" style="width: 40%;">Return Date</td>
+                            <td class="fw-bold">{{ return_obj.return_date|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Original Sale</td>
+                            <td>
+                                <a href="{% url 'sales:sale_detail' return_obj.sale.pk %}" class="text-decoration-none">
+                                    {{ return_obj.sale.invoice_no }}
+                                    <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Customer</td>
+                            <td>
+                                {% if return_obj.sale.customer %}
+                                {{ return_obj.sale.customer.name }}
+                                {% else %}
+                                <span class="text-muted fst-italic">Walk-in Customer</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Sale Date</td>
+                            <td>{{ return_obj.sale.sale_date|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Sale Status</td>
+                            <td>
+                                {% if return_obj.sale.status == 'COMPLETED' %}
+                                <span class="badge bg-success">Completed (Partial Return)</span>
+                                {% elif return_obj.sale.status == 'REFUNDED' %}
+                                <span class="badge bg-warning text-dark">Fully Refunded</span>
+                                {% elif return_obj.sale.status == 'CANCELLED' %}
+                                <span class="badge bg-dark">Cancelled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Refund Amount</td>
+                            <td class="fw-bold text-danger fs-5">৳{{ return_obj.refund_amount|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Processed By</td>
+                            <td>{{ return_obj.processed_by.get_full_name|default:return_obj.processed_by.username }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Reason Card -->
+        <div class="card shadow-sm mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-chat-left-text me-2"></i>Reason for Return
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">{{ return_obj.reason }}</p>
+            </div>
+        </div>
+
+        {% if return_obj.notes %}
+        <div class="card shadow-sm mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-sticky me-2"></i>Additional Notes
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">{{ return_obj.notes }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Returned Items Card -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-box-arrow-in-left me-2"></i>Returned Items
+                </h5>
+                <a href="{% url 'returns:sales_return_list' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-list me-1"></i> All Returns
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Medicine</th>
+                                <th>Batch</th>
+                                <th>Unit Price</th>
+                                <th>Qty</th>
+                                <th class="text-end">Line Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in return_obj.items.all %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <strong>{{ item.sale_item.medicine.name }}</strong>
+                                    {% if item.sale_item.medicine.generic_name %}
+                                    <br><small class="text-muted">{{ item.sale_item.medicine.generic_name }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.sale_item.batch %}
+                                    <span class="badge bg-info">{{ item.sale_item.batch.batch_no }}</span>
+                                    <br><small class="text-muted">Exp: {{ item.sale_item.batch.expiry_date|date:"M Y" }}</small>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>৳{{ item.unit_price|floatformat:2 }}</td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end fw-bold">৳{{ item.line_total|floatformat:2 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    No items in this return.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="5" class="text-end fw-bold">Total Refund:</td>
+                                <td class="text-end fw-bold text-danger fs-5">৳{{ return_obj.refund_amount|floatformat:2 }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Original Sale Link Card -->
+        <div class="card shadow-sm mt-3">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1">Original Sale: {{ return_obj.sale.invoice_no }}</h6>
+                    <small class="text-muted">
+                        Sale Date: {{ return_obj.sale.sale_date|date:"M d, Y" }} |
+                        Grand Total: ৳{{ return_obj.sale.grand_total|floatformat:2 }}
+                    </small>
+                </div>
+                <a href="{% url 'sales:sale_detail' return_obj.sale.pk %}" class="btn btn-outline-primary" target="_blank">
+                    <i class="bi bi-receipt me-1"></i> View Original Sale
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

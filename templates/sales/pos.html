@@ -1,0 +1,518 @@
+﻿{% extends 'base.html' %}
+{% load static %}
+{% load sale_tags %}
+
+{% block title %}Point of Sale — MediPOS{% endblock %}
+{% block page_title %}Point of Sale{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* POS Layout — full sidebar, remove padding, hide footer */
+    #page-content-wrapper > .container-fluid {
+        padding: 0.75rem !important;
+    }
+    #page-content-wrapper > footer {
+        display: none;
+    }
+    .pos-container {
+        display: block;
+        height: calc(100vh - 56px);
+        overflow: hidden;
+        margin: 2px;
+        max-width: 100%;
+    }
+
+    #page-content-wrapper {
+        overflow-x: hidden;
+    }
+    .pos-row {
+        height: 100%;
+        display: flex;
+        flex-wrap: nowrap;
+        overflow: hidden;
+    }
+    .pos-left {
+        height: 100%;
+        overflow-y: auto;
+        padding-right: 0.75rem;
+        flex: 0 0 40%;
+        min-width: 400px;
+    }
+    .pos-divider {
+        flex: 0 0 4px;
+        cursor: col-resize;
+        background: var(--bs-border-color);
+        transition: background-color 0.15s;
+        position: relative;
+        z-index: 5;
+        border: none;
+    }
+    .pos-divider:hover,
+    .pos-divider.active {
+        background: var(--bs-primary);
+    }
+    .pos-right {
+        height: 100%;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        flex: 0 0 55%;
+        min-width: 420px;
+        padding-left: 0.75rem;
+    }
+
+    /* Search */
+    .search-box {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--bs-body-bg);
+        padding: 0.5rem 0;
+    }
+
+    /* Category pills */
+    .category-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-bottom: 0.5rem;
+    }
+    .category-pill {
+        cursor: pointer;
+        font-size: 0.75rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 1rem;
+        white-space: nowrap;
+        background-color: var(--bs-tertiary-bg);
+        color: var(--bs-body-color);
+        border: 1px solid var(--bs-border-color);
+    }
+    .category-pill:hover {
+        background-color: var(--bs-secondary-bg);
+    }
+    .category-pill.active {
+        background-color: var(--bs-primary);
+        color: #fff;
+        border-color: var(--bs-primary);
+    }
+
+    /* Product grid */
+    .medicine-card {
+        cursor: pointer;
+        transition: transform 0.1s, box-shadow 0.1s;
+        border: 1px solid var(--bs-border-color);
+        border-radius: 0.5rem;
+        padding: 0.6rem;
+        height: 100%;
+    }
+    .medicine-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-color: var(--bs-primary);
+    }
+    .medicine-card .med-icon {
+        font-size: 1.3rem;
+        opacity: 0.7;
+    }
+    .medicine-card .med-name {
+        font-weight: 600;
+        font-size: 0.875rem;
+        line-height: 1.2;
+        margin-bottom: 0.15rem;
+    }
+    .medicine-card .med-brand {
+        font-size: 0.7rem;
+        color: var(--bs-secondary-color);
+    }
+    .medicine-card .med-price {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--bs-primary);
+    }
+    .medicine-card .med-stock {
+        font-size: 0.65rem;
+    }
+
+    /* Product list (table-style compact view) */
+    .medicine-list-item {
+        cursor: pointer;
+        transition: background-color 0.1s;
+        border-bottom: 1px solid var(--bs-border-color);
+        padding: 0.45rem 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+    }
+    .medicine-list-item:hover {
+        background-color: var(--bs-tertiary-bg);
+        border-color: var(--bs-primary);
+    }
+    .medicine-list-item .med-icon {
+        font-size: 1.1rem;
+        opacity: 0.7;
+        min-width: 1.4rem;
+        text-align: center;
+    }
+    .medicine-list-item .med-name {
+        font-weight: 600;
+        flex: 1;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .medicine-list-item .med-brand {
+        font-size: 0.7rem;
+        color: var(--bs-secondary-color);
+        max-width: 100px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .medicine-list-item .med-price {
+        font-weight: 700;
+        color: var(--bs-primary);
+        min-width: 70px;
+        text-align: right;
+    }
+    .medicine-list-item .med-stock {
+        font-size: 0.65rem;
+        min-width: 55px;
+        text-align: right;
+    }
+
+    .toggle-view-btn.active {
+        background-color: var(--bs-primary);
+        color: #fff;
+        border-color: var(--bs-primary);
+    }
+
+    /* Cart table */
+    .cart-table {
+        font-size: 0.8rem;
+        flex-shrink: 0;
+        table-layout: fixed;
+        width: 100%;
+    }
+    .cart-table th {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .cart-table td {
+        vertical-align: middle;
+        padding: 0.3rem 0.4rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .cart-table .col-medicine { width: 30%; }
+    .cart-table .col-qty      { width: 9%; }
+
+    /* Remove number input spinner arrows from Qty field */
+    .cart-table .qty-input::-webkit-outer-spin-button,
+    .cart-table .qty-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    .cart-table .qty-input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+    .cart-table .col-price    { width: 11%; }
+    .cart-table .col-disc     { width: 12%; }
+    .cart-table .col-total    { width: 13%; }
+    .cart-table .col-action   { width: 25%; min-width: 115px; }
+
+    /* Summary section */
+    .cart-summary {
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+    .cart-summary .grand-total {
+        font-size: 1.3rem;
+        font-weight: 800;
+    }
+
+    /* Action buttons */
+    .pos-actions {
+        flex-shrink: 0;
+        margin-top: auto;
+    }
+
+    @media (max-width: 992px) {
+        .pos-container {
+            height: auto;
+            overflow: visible;
+        }
+        .pos-row {
+            flex-direction: column;
+            height: auto;
+        }
+        .pos-left {
+            flex: auto !important;
+            height: auto;
+            max-height: 50vh;
+            min-width: 0;
+            border-right: none;
+            border-bottom: 2px solid var(--bs-border-color);
+            padding-right: 0 !important;
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .pos-divider {
+            display: none;
+        }
+        .pos-right {
+            flex: auto !important;
+            height: auto;
+            min-width: 0;
+            padding-left: 0 !important;
+        }
+    }
+
+    .held-sale-item {
+        cursor: pointer;
+        font-size: 0.78rem;
+    }
+
+    .toast-container {
+        z-index: 9999;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pos-container">
+    <div class="pos-row" id="posRow">
+        <!-- LEFT PANEL -->
+        <div class="pos-left" id="posLeft">
+            <div class="search-box">
+                <div class="row g-1">
+                    <div class="col-6">
+                        <input type="search" id="medicineSearch" class="form-control form-control-sm"
+                               placeholder="Search by name, brand, generic, barcode..." autocomplete="off">
+                    </div>
+                    <div class="col-4">
+                        <input type="text" id="barcodeInput" class="form-control form-control-sm"
+                               placeholder="Barcode scanner..." autocomplete="off">
+                    </div>
+                    <div class="col-2">
+                        <div class="btn-group w-100" role="group">
+                            <button class="btn btn-sm btn-outline-secondary toggle-view-btn"
+                                    id="viewGridBtn" title="Grid View">
+                                <i class="bi bi-grid-3x3-gap-fill"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary toggle-view-btn active"
+                                    id="viewListBtn" title="List View">
+                                <i class="bi bi-list-ul"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="category-pills" id="categoryFilters">
+                <span class="badge category-pill active"
+                      data-category="all">All</span>
+                {% for cat in categories %}
+                    <span class="badge category-pill"
+                          data-category="{{ cat.id }}">{{ cat.name }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="row row-cols-2 row-cols-md-3 g-2" id="productGrid">
+                {% for med in medicines %}
+                    <div class="col">
+                        <div class="medicine-card"
+                             data-id="{{ med.id }}"
+                             data-name="{{ med.name }}"
+                             data-brand="{{ med.brand|default:'' }}"
+                             data-barcode="{{ med.barcode|default:'' }}"
+                             data-generic="{{ med.generic_name|default:'' }}"
+                             data-category="{{ med.category_id|default:'' }}"
+                             data-price="{{ med.selling_price }}"
+                             data-unit-icon="{{ med.unit|unit_icon }}"
+                             data-unit="{{ med.unit }}">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="med-icon"><i class="bi {{ med.unit|unit_icon }}"></i></span>
+                                <div class="med-name">{{ med.name }}</div>
+                            </div>
+                            {% if med.brand %}
+                                <div class="med-brand mb-1">{{ med.brand }}</div>
+                            {% endif %}
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                                <span class="med-price">{{ med.selling_price|currency_bdt }}</span>
+                                <span class="badge {% if med.stock_quantity > 10 %}bg-success{% elif med.stock_quantity > 0 %}bg-warning text-dark{% else %}bg-danger{% endif %} med-stock">
+                                    {{ med.stock_quantity }} {{ med.unit }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12 text-center text-muted py-5">
+                        <i class="bi bi-box-seam fs-1 d-block mb-2"></i>
+                        No medicines available. Add medicines first.
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="pos-divider" id="posDivider" title="Drag to resize panels"></div>
+
+        <!-- RIGHT PANEL: Cart + Checkout -->
+        <div class="pos-right" id="posRight">
+            <div class="d-flex align-items-center gap-2 mb-2 flex-shrink-0">
+                <label class="form-label mb-0 text-nowrap small">Customer:</label>
+                <select id="customerSelect" class="form-select form-select-sm">
+                    <option value="">— Walk-in Customer —</option>
+                    {% for cust in recent_customers %}
+                        <option value="{{ cust.id }}">{{ cust.name }} {% if cust.phone %}({{ cust.phone }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-1 flex-shrink-0">
+                <h6 class="mb-0">Cart <span class="badge bg-primary rounded-pill" id="cartCount">0</span></h6>
+                {% if held_sales %}
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-warning dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-pause-circle"></i> Held ({{ held_sales|length }})
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" id="heldSalesList" style="max-height: 200px; overflow-y: auto;">
+                            {% for held in held_sales %}
+                                <li class="dropdown-item held-sale-item">
+                                    <span>{{ held.invoice_no }}</span>
+                                    <small class="text-muted d-block">{{ held.sale_date|date:"M d, H:i" }}</small>
+                                    <span class="text-primary">{{ held.grand_total|currency_bdt }}</span>
+                                    <button class="btn btn-sm btn-outline-primary float-end resume-sale"
+                                            data-sale-id="{{ held.id }}">Resume</button>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="table-responsive flex-grow-1" style="min-height: 150px; overflow-y: auto;">
+                <table class="table table-sm cart-table mb-0">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th class="col-medicine">Medicine</th>
+                            <th class="col-qty text-end">Qty</th>
+                            <th class="col-price text-end">Price</th>
+                            <th class="col-disc text-end">Disc</th>
+                            <th class="col-total text-end">Total</th>
+                            <th class="col-action text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cartTableBody">
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="bi bi-cart-x fs-3 d-block mb-2"></i>
+                                Cart is empty
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="cart-summary border-top pt-2 mt-2 flex-shrink-0">
+                <div class="row mb-1">
+                    <div class="col-6 text-muted">Subtotal:</div>
+                    <div class="col-6 text-end" id="cartSubtotal">৳ 0.00</div>
+                </div>
+                <div class="row mb-1 align-items-center">
+                    <div class="col-3 text-muted">Discount:</div>
+                    <div class="col-3">
+                        <select id="discountType" class="form-select form-select-sm">
+                            <option value="flat">৳</option>
+                            <option value="percent">%</option>
+                        </select>
+                    </div>
+                    <div class="col-3">
+                        <input type="number" id="discountValue" class="form-control form-control-sm"
+                               value="0" min="0" step="0.01">
+                    </div>
+                    <div class="col-3 text-end" id="cartDiscount">৳ 0.00</div>
+                </div>
+                <div class="row mb-1">
+                    <div class="col-6 text-muted">Tax (VAT):</div>
+                    <div class="col-6 text-end" id="cartTax">৳ 0.00</div>
+                </div>
+                <div class="row border-top pt-2">
+                    <div class="col-6 fw-bold">Grand Total:</div>
+                    <div class="col-6 text-end grand-total text-primary" id="cartGrandTotal">৳ 0.00</div>
+                </div>
+            </div>
+
+            <div class="border-top pt-2 mt-2 flex-shrink-0">
+                <div class="row g-1 align-items-center mb-1">
+                    <div class="col-4">
+                        <label class="form-label mb-0 small">Payment Mode:</label>
+                    </div>
+                    <div class="col-8">
+                        <select id="paymentMode" class="form-select form-select-sm">
+                            <option value="CASH">Cash</option>
+                            <option value="CARD">Card</option>
+                            <option value="MOBILE">Mobile Banking</option>
+                            <option value="MIXED">Mixed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row g-1 align-items-center">
+                    <div class="col-4">
+                        <label class="form-label mb-0 small">Amount Paid:</label>
+                    </div>
+                    <div class="col-4">
+                        <input type="number" id="amountPaid" class="form-control form-control-sm"
+                               value="0" min="0" step="0.01">
+                    </div>
+                    <div class="col-4">
+                        <span class="small text-muted">Change:</span>
+                        <strong id="changeAmount" class="text-success">৳ 0.00</strong>
+                    </div>
+                </div>
+                <!-- Deferred Payment Option (visible when customer selected) -->
+                <div class="row g-1 align-items-center mt-1" id="deferredPaymentRow" style="display:none;">
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="deferredPayment">
+                            <label class="form-check-label small" for="deferredPayment">
+                                <i class="bi bi-clock-history me-1"></i>Deferred Payment — remaining added to customer dues
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pos-actions border-top pt-2 mt-2">
+                <div class="row g-2">
+                    <div class="col-4">
+                        <button class="btn btn-warning btn-sm w-100" id="holdBtn">
+                            <i class="bi bi-pause-circle"></i> Hold
+                        </button>
+                    </div>
+                    <div class="col-4">
+                        <button class="btn btn-danger btn-sm w-100" id="clearCartBtn">
+                            <i class="bi bi-trash"></i> Clear
+                        </button>
+                    </div>
+                    <div class="col-4">
+                        <button class="btn btn-success btn-sm w-100" id="checkoutBtn">
+                            <i class="bi bi-check-circle"></i> Complete Sale
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pos.js' %}"></script>
+{% endblock %}

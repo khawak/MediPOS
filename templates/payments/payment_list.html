@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payment Transactions — MediPOS{% endblock %}
+
+{% block page_title %}Payment Transactions{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Filter Panel -->
+    <div class="card material-card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-funnel me-1"></i> Filters</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label for="q" class="form-label small text-muted">Search</label>
+                    <input type="text" name="q" id="q" class="form-control"
+                           placeholder="Search by name, reference, or notes..."
+                           value="{{ search_query }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="type" class="form-label small text-muted">Payee Type</label>
+                    <select name="type" id="type" class="form-select">
+                        <option value="">All</option>
+                        <option value="customer" {% if current_type == 'customer' %}selected{% endif %}>Customers</option>
+                        <option value="supplier" {% if current_type == 'supplier' %}selected{% endif %}>Suppliers</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="bi bi-search me-1"></i> Filter
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <a href="{% url 'payments:due_dashboard' %}" class="btn btn-outline-info btn-sm w-100">
+                        <i class="bi bi-pie-chart me-1"></i> Due Dashboard
+                    </a>
+                </div>
+                <div class="col-md-1">
+                    <a href="{% url 'payments:payment_list' %}" class="btn btn-outline-secondary btn-sm w-100"
+                       title="Clear Filters">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="card material-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-cash-stack me-1"></i> Transactions</h6>
+            <div>
+                <span class="badge bg-secondary rounded-pill me-2">{{ page_obj.paginator.count }} transaction{{ page_obj.paginator.count|pluralize }}</span>
+                <span class="badge bg-success rounded-pill">Total: ৳ {{ total_received|floatformat:2 }}</span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Payee</th>
+                            <th>Type</th>
+                            <th class="text-end">Amount</th>
+                            <th>Method</th>
+                            <th>Invoice/PO</th>
+                            <th>Reference</th>
+                            <th>By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in transactions %}
+                        <tr>
+                            <td class="text-nowrap">{{ tx.transaction_date|date:'d M Y' }}</td>
+                            <td>
+                                <a href="{{ tx.get_absolute_url }}" class="text-decoration-none">
+                                    {{ tx.payee_name }}
+                                </a>
+                                <br>
+                                <small class="text-muted">{{ tx.payee_type_name }}</small>
+                            </td>
+                            <td>
+                                {% if tx.transaction_type == 'PAYMENT' %}
+                                    <span class="badge bg-success rounded-pill">Payment</span>
+                                {% else %}
+                                    <span class="badge bg-info rounded-pill">Advance</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold text-success">৳ {{ tx.amount|floatformat:2 }}</td>
+                            <td>
+                                {% if tx.payment_method == 'CASH' %}
+                                    <span class="badge bg-light text-dark">Cash</span>
+                                {% elif tx.payment_method == 'BANK' %}
+                                    <span class="badge bg-primary">Bank</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Mobile</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                {% if tx.sale %}
+                                    <a href="{% url 'sales:sale_detail' tx.sale.pk %}" class="text-decoration-none">
+                                        {{ tx.sale.invoice_no }}
+                                    </a>
+                                {% elif tx.purchase_order %}
+                                    <a href="{% url 'purchases:po_detail' tx.purchase_order.pk %}" class="text-decoration-none">
+                                        {{ tx.purchase_order.po_number }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small">{{ tx.reference|default:'—' }}</td>
+                            <td class="text-muted small">{{ tx.created_by.get_full_name|default:tx.created_by|default:'—' }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                                No payment transactions found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="card-footer">
+            <nav aria-label="Payment pagination">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    {{ num }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var form = document.querySelector('form');
+    var searchInput = document.getElementById('q');
+    var typeSelect = document.getElementById('type');
+    var debounceTimer;
+
+    // Restore focus to search field if it was focused before submit
+    if (searchInput && sessionStorage.getItem('paymentSearchFocused') === 'true') {
+        sessionStorage.removeItem('paymentSearchFocused');
+        // Set cursor at the end of existing text
+        var val = searchInput.value;
+        searchInput.focus();
+        searchInput.setSelectionRange(val.length, val.length);
+    }
+
+    // Auto-submit on typing in search field (debounced 400ms)
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () {
+                // Remember focus state before submitting
+                if (document.activeElement === searchInput) {
+                    sessionStorage.setItem('paymentSearchFocused', 'true');
+                }
+                form.submit();
+            }, 400);
+        });
+    }
+
+    // Auto-submit on type dropdown change
+    if (typeSelect) {
+        typeSelect.addEventListener('change', function () {
+            // Don't set the search focus flag when changing dropdown
+            sessionStorage.removeItem('paymentSearchFocused');
+            form.submit();
+        });
+    }
+});
+</script>
+{% endblock %}

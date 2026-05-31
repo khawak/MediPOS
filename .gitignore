@@ -1,0 +1,40 @@
+# ── Python / Django ─────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.db.sqlite3-journal
+*.log
+*.pot
+
+# ── Virtual Environment ────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env
+*.egg-info/
+*.egg
+
+# ── Django ─────────────────────────────────────────────────────────
+db.sqlite3
+/media/
+/staticfiles/
+
+# ── IDE / Editor ───────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Testing / Coverage ─────────────────────────────────────────────
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+
+# ── Distribution ───────────────────────────────────────────────────
+dist/
+build/
+*.whl

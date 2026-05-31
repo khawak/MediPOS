@@ -1,0 +1,12 @@
+Django>=4.2,<5.0
+python-decouple
+django-crispy-forms
+crispy-bootstrap5
+django-filter
+django-widget-tweaks
+Pillow
+openpyxl
+reportlab
+pytest-django
+pytest-cov
+# django-debug-toolbar  # dev only — uncomment for local development

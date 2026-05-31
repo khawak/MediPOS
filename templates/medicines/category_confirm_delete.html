@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Category — MediPOS{% endblock %}
+
+{% block page_title %}Delete Category{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Confirm Deletion
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="lead">
+                    Are you sure you want to delete the category
+                    <strong>"{{ object.name }}"</strong>?
+                </p>
+
+                {% if linked_count > 0 %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-circle me-2"></i>
+                        <strong>Warning:</strong> This category has
+                        <strong>{{ linked_count }}</strong> medicine(s) linked to it.
+                        Deleting the category will set their category to
+                        <em>None</em> (not delete the medicines).
+                    </div>
+                {% else %}
+                    <div class="alert alert-secondary">
+                        <i class="bi bi-info-circle me-2"></i>
+                        This category has no medicines linked to it.
+                    </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between mt-3">
+                        <a href="{% url 'medicines:category_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i> Delete Category
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

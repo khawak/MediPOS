@@ -1,0 +1,3 @@
+"""
+MediPOS Purchases App.
+"""

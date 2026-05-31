@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if object %}Edit Customer{% else %}Add Customer{% endif %} — MediPOS
+{% endblock %}
+
+{% block page_title %}
+    {% if object %}Edit Customer{% else %}Add Customer{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    {% if object %}
+                        <i class="bi bi-pencil me-2"></i>Edit Customer: {{ object.name }}
+                    {% else %}
+                        <i class="bi bi-plus-circle me-2"></i>Add New Customer
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <strong>Please correct the errors below:</strong>
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="text-muted border-bottom pb-2 mb-3">
+                                <i class="bi bi-person me-1"></i>Personal Information
+                            </h6>
+                            {{ form.name|as_crispy_field }}
+                            {{ form.phone|as_crispy_field }}
+                            {{ form.email|as_crispy_field }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6 class="text-muted border-bottom pb-2 mb-3">
+                                <i class="bi bi-star me-1"></i>Loyalty & Status
+                            </h6>
+                            {{ form.loyalty_points|as_crispy_field }}
+                            {{ form.is_active|as_crispy_field }}
+                        </div>
+
+                        <div class="col-12">
+                            <hr>
+                        </div>
+
+                        <div class="col-12">
+                            {{ form.address|as_crispy_field }}
+                        </div>
+
+                        <div class="col-12">
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer d-flex justify-content-between">
+                <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-primary" form="customer-form">
+                    <i class="bi bi-check-lg me-1"></i> Save Customer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Attach the footer submit button to the form
+    document.addEventListener('DOMContentLoaded', function () {
+        var form = document.querySelector('form[method="post"]');
+        if (form) {
+            form.id = 'customer-form';
+        }
+    });
+</script>
+{% endblock %}

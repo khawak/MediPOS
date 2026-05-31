@@ -1,0 +1,3 @@
+"""
+MediPOS Suppliers App.
+"""

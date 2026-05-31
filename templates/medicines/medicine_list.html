@@ -1,0 +1,400 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Medicines — MediPOS{% endblock %}
+
+{% block page_title %}Medicines{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">
+            <i class="bi bi-capsule-pill me-2"></i>Medicines
+        </h2>
+        <p class="text-muted mb-0">Manage your pharmacy product inventory.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'medicines:category_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-tags me-1"></i> Categories
+        </a>
+        <a href="{% url 'medicines:medicine_import' %}" class="btn btn-outline-info">
+            <i class="bi bi-upload me-1"></i> Import CSV
+        </a>
+        <a href="{% url 'medicines:medicine_add' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Add Medicine
+        </a>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4" id="medicine-stats">
+    <div class="col-md-4">
+        <div class="card shadow-sm border-primary">
+            <div class="card-body text-center py-3">
+                <h3 class="mb-0 text-primary">{{ page_obj.paginator.count }}</h3>
+                <small class="text-muted">Total Medicines</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm border-warning">
+            <div class="card-body text-center py-3">
+                <h3 class="mb-0 text-warning">{{ low_stock_count }}</h3>
+                <small class="text-muted">Low Stock Items</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm border-success">
+            <div class="card-body text-center py-3">
+                <h3 class="mb-0 text-success">{{ filter.qs.count }}</h3>
+                <small class="text-muted">Filtered Results</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Panel -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="{{ filter.form.search.id_for_label }}" class="form-label">Search</label>
+                {{ filter.form.search }}
+            </div>
+            <div class="col-md-3">
+                <label for="{{ filter.form.category.id_for_label }}" class="form-label">Category</label>
+                {{ filter.form.category }}
+            </div>
+            <div class="col-md-2">
+                <div class="form-check mt-4">
+                    {{ filter.form.is_active }}
+                    <label class="form-check-label" for="{{ filter.form.is_active.id_for_label }}">
+                        Active Only
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-check mt-4">
+                    {{ filter.form.low_stock }}
+                    <label class="form-check-label" for="{{ filter.form.low_stock.id_for_label }}">
+                        Low Stock Only
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-outline-primary w-100" title="Apply Filters">
+                    <i class="bi bi-funnel"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Medicines Table -->
+<div class="card shadow-sm" id="medicine-table-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Brand</th>
+                        <th>Category</th>
+                        <th>Barcode</th>
+                        <th>Stock</th>
+                        <th class="text-end">Sell Price</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for medicine in medicines %}
+                        <tr>
+                            <td class="text-muted small">{{ forloop.counter }}</td>
+                            <td>
+                                <a href="{% url 'medicines:medicine_detail' medicine.pk %}" class="fw-semibold text-decoration-none">
+                                    {{ medicine.name }}
+                                </a>
+                                {% if medicine.generic_name %}
+                                    <br><small class="text-muted">{{ medicine.generic_name }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ medicine.brand|default:"—" }}</td>
+                            <td>{{ medicine.category.name|default:"—" }}</td>
+                            <td>
+                                {% if medicine.barcode %}
+                                    <code>{{ medicine.barcode }}</code>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="fw-semibold">{{ medicine.stock_quantity }}</span>
+                                <small class="text-muted"> {{ medicine.unit }}</small>
+                            </td>
+                            <td class="text-end fw-semibold">
+                                ৳{{ medicine.selling_price|floatformat:2 }}
+                            </td>
+                            <td>
+                                {% if not medicine.is_active %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                {% elif medicine.is_low_stock %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>Low Stock
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-success">In Stock</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a
+                                        href="{% url 'medicines:medicine_detail' medicine.pk %}"
+                                        class="btn btn-outline-primary"
+                                        title="View Details"
+                                    >
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a
+                                        href="{% url 'medicines:medicine_edit' medicine.pk %}"
+                                        class="btn btn-outline-secondary"
+                                        title="Edit"
+                                    >
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a
+                                        href="{% url 'medicines:medicine_delete' medicine.pk %}"
+                                        class="btn btn-outline-danger"
+                                        title="Deactivate"
+                                    >
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="bi bi-inbox display-4 text-muted d-block mb-2"></i>
+                                <p class="text-muted mb-3">No medicines found matching your criteria.</p>
+                                <div class="d-flex justify-content-center gap-2">
+                                    <a href="{% url 'medicines:medicine_add' %}" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-plus-lg me-1"></i> Add Medicine
+                                    </a>
+                                    <a href="{% url 'medicines:medicine_import' %}" class="btn btn-outline-info btn-sm">
+                                        <i class="bi bi-upload me-1"></i> Import CSV
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination with sliding window (max ~7 page links) to prevent DOM bloat -->
+{% if is_paginated %}
+    {% with current=page_obj.number total=page_obj.paginator.num_pages count=page_obj.paginator.count %}
+    <div class="d-flex justify-content-center align-items-center flex-wrap gap-3 mt-3" id="medicine-pagination">
+        <nav>
+            <ul class="pagination mb-0 flex-wrap">
+                {# Previous #}
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v|urlencode }}{% endif %}{% endfor %}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
+                {% endif %}
+
+                {# First page link #}
+                {% if current > 4 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v|urlencode }}{% endif %}{% endfor %}">1</a>
+                    </li>
+                    {% if current > 5 %}
+                        <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                    {% endif %}
+                {% endif %}
+
+                {# Page window: 3 before to 3 after current, clamped to valid range #}
+                {% with start=current|add:"-3" end=current|add:"3" %}
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if num >= start and num <= end %}
+                            <li class="page-item {% if num == current %}active{% endif %}">
+                                <a class="page-link" href="?page={{ num }}{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v|urlencode }}{% endif %}{% endfor %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                {% endwith %}
+
+                {# Last page link #}
+                {% if current < total|add:"-3" %}
+                    {% if current < total|add:"-4" %}
+                        <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                    {% endif %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ total }}{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v|urlencode }}{% endif %}{% endfor %}">{{ total }}</a>
+                    </li>
+                {% endif %}
+
+                {# Next #}
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v|urlencode }}{% endif %}{% endfor %}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
+                {% endif %}
+            </ul>
+        </nav>
+        <span class="badge bg-secondary fs-6">{{ count }} item{{ count|pluralize }}</span>
+    </div>
+    {% endwith %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/**
+ * Real-time AJAX filtering for the medicine list.
+ *
+ * On each keypress (search, debounced 300ms) or change (category, checkboxes),
+ * fetch the filtered results via AJAX and replace only the stats, table, and
+ * pagination sections — so the search input keeps focus.
+ */
+(function () {
+    const form = document.querySelector('form[method="get"]');
+    if (!form) return;
+
+    const searchInput = form.querySelector('input[name="search"]');
+    const categorySelect = form.querySelector('select[name="category"]');
+    const activeCheckbox = form.querySelector('input[name="is_active"]');
+    const lowStockCheckbox = form.querySelector('input[name="low_stock"]');
+
+    let debounceTimer;
+    let currentController = null;  // AbortController for in-flight requests
+
+    function replaceSection(id, newElement) {
+        const existing = document.getElementById(id);
+        if (existing && newElement) {
+            existing.parentNode.replaceChild(newElement, existing);
+        }
+    }
+
+    function updateDOM(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Replace stats
+        replaceSection('medicine-stats', doc.getElementById('medicine-stats'));
+
+        // Replace table card
+        replaceSection('medicine-table-card', doc.getElementById('medicine-table-card'));
+
+        // Replace pagination (or remove if none)
+        const oldPagination = document.getElementById('medicine-pagination');
+        const newPagination = doc.getElementById('medicine-pagination');
+        if (oldPagination && newPagination) {
+            oldPagination.parentNode.replaceChild(newPagination, oldPagination);
+        } else if (oldPagination && !newPagination) {
+            oldPagination.remove();
+        } else if (!oldPagination && newPagination) {
+            // Append after table card
+            const tableCard = document.getElementById('medicine-table-card');
+            if (tableCard && tableCard.parentNode) {
+                tableCard.parentNode.appendChild(newPagination);
+            }
+        }
+    }
+
+    function doFetch(params) {
+        // Abort any in-flight request
+        if (currentController) {
+            currentController.abort();
+        }
+        currentController = new AbortController();
+
+        const url = window.location.pathname + '?' + params.toString();
+
+        fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            signal: currentController.signal
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error('Network error');
+                return response.text();
+            })
+            .then(function (html) {
+                updateDOM(html);
+                // Update browser URL without reload
+                history.replaceState(null, '', url);
+            })
+            .catch(function (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('Filter fetch failed:', err);
+                }
+            });
+    }
+
+    function triggerFilter() {
+        const params = new URLSearchParams(new FormData(form));
+        // Always reset to page 1 on filter change
+        params.delete('page');
+        doFetch(params);
+    }
+
+    function submitFormPage(pageNum) {
+        const params = new URLSearchParams(new FormData(form));
+        params.set('page', pageNum);
+        doFetch(params);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // --- Event listeners for filter controls ---
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(triggerFilter, 300);
+        });
+    }
+
+    if (categorySelect) {
+        categorySelect.addEventListener('change', triggerFilter);
+    }
+
+    if (activeCheckbox) {
+        activeCheckbox.addEventListener('change', triggerFilter);
+    }
+
+    if (lowStockCheckbox) {
+        lowStockCheckbox.addEventListener('change', triggerFilter);
+    }
+
+    // --- Delegate pagination clicks to AJAX (so pagination stays within the SPA feel) ---
+    document.addEventListener('click', function (e) {
+        var link = e.target.closest('.page-link');
+        if (!link) return;
+        if (!link.closest('#medicine-pagination')) return;
+        e.preventDefault();
+        var href = link.getAttribute('href');
+        if (!href) return;
+        var url = new URL(href, window.location.origin);
+        var page = url.searchParams.get('page');
+        if (page) {
+            submitFormPage(page);
+        }
+    });
+
+})();
+</script>
+{% endblock %}

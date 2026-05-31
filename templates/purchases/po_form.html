@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ page_title|default:"Purchase Order" }} — MediPOS{% endblock %}
+
+{% block page_title %}{{ page_title|default:"Purchase Order" }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'purchases:po_list' %}">Purchase Orders</a></li>
+        {% if action == 'Edit' %}
+        <li class="breadcrumb-item"><a href="{{ object.get_absolute_url }}">{{ object.po_number }}</a></li>
+        <li class="breadcrumb-item active">Edit</li>
+        {% else %}
+        <li class="breadcrumb-item active">New Purchase Order</li>
+        {% endif %}
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    {% if action == 'Edit' %}
+                        <i class="bi bi-pencil me-2"></i>Edit {{ object.po_number }}
+                    {% else %}
+                        <i class="bi bi-plus-circle me-2"></i>New Purchase Order
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>
+                            {% if action == 'Edit' %}Update{% else %}Create{% endif %} Purchase Order
+                        </button>
+                        <a href="{% url 'purchases:po_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if action == 'Create' %}
+        <div class="card shadow-sm mt-3 bg-light border">
+            <div class="card-body">
+                <h6 class="mb-2">
+                    <i class="bi bi-info-circle me-1"></i>Next Steps
+                </h6>
+                <p class="mb-1 small">1. Create the purchase order with supplier and delivery details.</p>
+                <p class="mb-1 small">2. Add line items (medicines, quantities, prices).</p>
+                <p class="mb-0 small">3. Send the order to the supplier to change its status to "Ordered".</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

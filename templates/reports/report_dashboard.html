@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reports — MediPOS{% endblock %}
+{% block page_title %}Reports Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Sales Summary -->
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-body text-center">
+        <i class="bi bi-graph-up-arrow display-4 text-primary mb-3"></i>
+        <h5 class="card-title">Sales Summary</h5>
+        <p class="card-text text-muted small">
+          Total sales, revenue, daily breakdown, and payment-mode analysis.
+        </p>
+        <a href="{% url 'reports:sales_summary' %}" class="btn btn-outline-primary btn-sm">
+          View Report <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profit & Loss -->
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-body text-center">
+        <i class="bi bi-cash-stack display-4 text-success mb-3"></i>
+        <h5 class="card-title">Profit & Loss</h5>
+        <p class="card-text text-muted small">
+          Revenue vs cost analysis per medicine with margin calculation.
+        </p>
+        <a href="{% url 'reports:profit_loss' %}" class="btn btn-outline-success btn-sm">
+          View Report <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Sales -->
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-body text-center">
+        <i class="bi bi-box-seam display-4 text-info mb-3"></i>
+        <h5 class="card-title">Product Sales</h5>
+        <p class="card-text text-muted small">
+          Sales breakdown by medicine with optional category/medicine filters.
+        </p>
+        <a href="{% url 'reports:product_sales' %}" class="btn btn-outline-info btn-sm">
+          View Report <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock Valuation -->
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-body text-center">
+        <i class="bi bi-calculator display-4 text-warning mb-3"></i>
+        <h5 class="card-title">Stock Valuation</h5>
+        <p class="card-text text-muted small">
+          Current inventory value at purchase price with total summary.
+        </p>
+        <a href="{% url 'reports:stock_valuation' %}" class="btn btn-outline-warning btn-sm">
+          View Report <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expiry Report -->
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-body text-center">
+        <i class="bi bi-exclamation-triangle display-4 text-danger mb-3"></i>
+        <h5 class="card-title">Expiry Report</h5>
+        <p class="card-text text-muted small">
+          Batch expiry tracking with status filters and alerts.
+        </p>
+        <a href="{% url 'reports:expiry_report' %}" class="btn btn-outline-danger btn-sm">
+          View Report <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Selling -->
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-body text-center">
+        <i class="bi bi-trophy display-4 text-dark mb-3"></i>
+        <h5 class="card-title">Top Selling</h5>
+        <p class="card-text text-muted small">
+          Ranked list of best-selling medicines by quantity sold.
+        </p>
+        <a href="{% url 'reports:top_selling' %}" class="btn btn-outline-dark btn-sm">
+          View Report <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

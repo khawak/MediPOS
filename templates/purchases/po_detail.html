@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ po.po_number }} — MediPOS{% endblock %}
+
+{% block page_title %}Purchase Order Details{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'purchases:po_list' %}">Purchase Orders</a></li>
+        <li class="breadcrumb-item active">{{ po.po_number }}</li>
+    </ol>
+</nav>
+
+<!-- Status Badge Banner -->
+<div class="mb-4">
+    {% if po.status == 'DRAFT' %}
+        <span class="badge bg-secondary fs-6 px-3 py-2">
+            <i class="bi bi-pencil me-1"></i>Draft
+        </span>
+    {% elif po.status == 'ORDERED' %}
+        <span class="badge bg-primary fs-6 px-3 py-2">
+            <i class="bi bi-send me-1"></i>Ordered
+        </span>
+    {% elif po.status == 'RECEIVED' %}
+        <span class="badge bg-success fs-6 px-3 py-2">
+            <i class="bi bi-check-circle me-1"></i>Received
+        </span>
+    {% elif po.status == 'CANCELLED' %}
+        <span class="badge bg-dark fs-6 px-3 py-2">
+            <i class="bi bi-x-circle me-1"></i>Cancelled
+        </span>
+    {% endif %}
+</div>
+
+<div class="row">
+    <!-- PO Info Card -->
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Order Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted" style="width: 40%;">PO Number</td>
+                            <td class="fw-bold">{{ po.po_number }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Supplier</td>
+                            <td>
+                                <a href="{{ po.supplier.get_absolute_url }}" class="text-decoration-none">
+                                    {{ po.supplier.name }}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Order Date</td>
+                            <td>{{ po.order_date|date:"F d, Y" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Expected Delivery</td>
+                            <td>
+                                {% if po.expected_delivery_date %}
+                                    {{ po.expected_delivery_date|date:"F d, Y" }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Created By</td>
+                            <td>{{ po.created_by.get_full_name|default:po.created_by.username|default:"—" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Created At</td>
+                            <td>{{ po.created_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% if po.status == 'RECEIVED' %}
+                        <tr>
+                            <td class="text-muted">Received By</td>
+                            <td>{{ po.received_by.get_full_name|default:po.received_by.username|default:"—" }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td class="text-muted">Total Items</td>
+                            <td>{{ po.items_count }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Total Amount</td>
+                            <td class="fw-bold fs-5">৳{{ po.total_amount|floatformat:2 }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Action Buttons -->
+            <div class="card-footer d-flex flex-wrap gap-2">
+                {% if po.status == 'DRAFT' %}
+                    <a href="{% url 'purchases:po_add_item' po.pk %}" class="btn btn-success">
+                        <i class="bi bi-plus-lg me-1"></i> Add Items
+                    </a>
+                    <a href="{% url 'purchases:po_edit' po.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i> Edit
+                    </a>
+                    <form method="post" action="{% url 'purchases:po_send' po.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary"
+                                {% if po.items_count == 0 %}disabled{% endif %}>
+                            <i class="bi bi-send me-1"></i> Send to Supplier
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'purchases:po_cancel' po.pk %}" class="d-inline"
+                          onsubmit="return confirm('Are you sure you want to cancel this purchase order?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger">
+                            <i class="bi bi-x-circle me-1"></i> Cancel PO
+                        </button>
+                    </form>
+                {% elif po.status == 'ORDERED' %}
+                    <a href="{% url 'purchases:po_receive' po.pk %}" class="btn btn-success btn-lg">
+                        <i class="bi bi-box-seam me-1"></i> Receive Stock
+                    </a>
+                    <form method="post" action="{% url 'purchases:po_cancel' po.pk %}" class="d-inline"
+                          onsubmit="return confirm('Are you sure you want to cancel this order?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger">
+                            <i class="bi bi-x-circle me-1"></i> Cancel
+                        </button>
+                    </form>
+                {% elif po.status == 'RECEIVED' %}
+                    <span class="text-success fw-semibold">
+                        <i class="bi bi-check-circle-fill me-1"></i>
+                        Stock received on {{ po.updated_at|date:"M d, Y" }}
+                    </span>
+                {% endif %}
+                <a href="{% url 'purchases:po_print' po.pk %}" class="btn btn-outline-info" target="_blank">
+                    <i class="bi bi-printer me-1"></i> Print PO
+                </a>
+                <a href="{% url 'purchases:po_list' %}" class="btn btn-outline-secondary ms-auto">
+                    <i class="bi bi-arrow-left me-1"></i> Back to List
+                </a>
+            </div>
+        </div>
+
+        <!-- Notes Card -->
+        {% if po.notes %}
+        <div class="card shadow-sm mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-sticky me-1"></i>Notes
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-0" style="white-space: pre-wrap;">{{ po.notes }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Items Table -->
+    <div class="col-lg-7 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list-ul me-2"></i>Order Items ({{ po.items_count }})
+                </h5>
+                {% if po.status == 'DRAFT' %}
+                <a href="{% url 'purchases:po_add_item' po.pk %}" class="btn btn-sm btn-success">
+                    <i class="bi bi-plus-lg me-1"></i> Add Item
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Medicine</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end">Line Total</th>
+                                <th>Batch No</th>
+                                <th>Expiry</th>
+                                {% if po.status == 'DRAFT' %}
+                                <th class="text-center">Actions</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <a href="{% url 'medicines:medicine_detail' item.medicine.pk %}"
+                                       class="text-decoration-none">
+                                        {{ item.medicine.name }}
+                                    </a>
+                                    {% if item.medicine.brand %}
+                                        <small class="text-muted d-block">({{ item.medicine.brand }})</small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end">৳{{ item.unit_price|floatformat:2 }}</td>
+                                <td class="text-end fw-semibold">৳{{ item.line_total|floatformat:2 }}</td>
+                                <td>{{ item.batch_no|default:"—" }}</td>
+                                <td>
+                                    {% if item.expiry_date %}
+                                        {{ item.expiry_date|date:"M d, Y" }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                {% if po.status == 'DRAFT' %}
+                                <td class="text-center">
+                                    <form method="post" action="{% url 'purchases:po_delete_item' item.pk %}"
+                                          onsubmit="return confirm('Remove {{ item.medicine.name }} from this order?');"
+                                          class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                title="Remove item">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="{% if po.status == 'DRAFT' %}8{% else %}7{% endif %}"
+                                    class="text-center py-4 text-muted">
+                                    <i class="bi bi-cart-x display-4 d-block mb-2"></i>
+                                    No items added yet.
+                                    {% if po.status == 'DRAFT' %}
+                                    <br>
+                                    <a href="{% url 'purchases:po_add_item' po.pk %}" class="btn btn-success btn-sm mt-2">
+                                        <i class="bi bi-plus-lg me-1"></i> Add your first item
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        {% if items %}
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="{% if po.status == 'DRAFT' %}4{% else %}3{% endif %}"
+                                    class="text-end fw-bold">Total:</td>
+                                <td class="text-end fw-bold fs-5">৳{{ po.total_amount|floatformat:2 }}</td>
+                                <td colspan="{% if po.status == 'DRAFT' %}3{% else %}2{% endif %}"></td>
+                            </tr>
+                        </tfoot>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Return Section (only for RECEIVED POs) -->
+        {% if po.status == 'RECEIVED' and items %}
+        <div class="card shadow-sm mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-arrow-return-left me-1"></i>Purchase Return
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">Return items from this purchase order. The stock will be adjusted automatically.</p>
+                {% for item in items %}
+                <form method="post" action="{% url 'purchases:po_return' po.pk %}"
+                      class="row g-2 align-items-end mb-2 pb-2 border-bottom"
+                      onsubmit="return confirm('Return {{ item.quantity }} units of {{ item.medicine.name }}?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="item_id" value="{{ item.pk }}">
+                    <div class="col-md-5">
+                        <small class="text-muted">{{ item.medicine.name }}</small>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" name="return_quantity" class="form-control form-control-sm"
+                               min="1" max="{{ item.quantity }}" value="1"
+                               title="Max return: {{ item.quantity }}">
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted">of {{ item.quantity }}</small>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-sm btn-outline-warning w-100">
+                            <i class="bi bi-arrow-return-left"></i> Return
+                        </button>
+                    </div>
+                </form>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

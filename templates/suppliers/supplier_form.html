@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if object %}Edit Supplier{% else %}Add Supplier{% endif %} — MediPOS
+{% endblock %}
+
+{% block page_title %}
+    {% if object %}Edit Supplier{% else %}Add Supplier{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    {% if object %}
+                        <i class="bi bi-pencil me-2"></i>Edit Supplier: {{ object.name }}
+                    {% else %}
+                        <i class="bi bi-plus-circle me-2"></i>Add New Supplier
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="text-muted border-bottom pb-2 mb-3">
+                                <i class="bi bi-building me-1"></i>Company Information
+                            </h6>
+                            {{ form.name|as_crispy_field }}
+                            {{ form.contact_person|as_crispy_field }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6 class="text-muted border-bottom pb-2 mb-3">
+                                <i class="bi bi-telephone me-1"></i>Contact Details
+                            </h6>
+                            {{ form.phone|as_crispy_field }}
+                            {{ form.email|as_crispy_field }}
+                        </div>
+
+                        <div class="col-12">
+                            <hr>
+                        </div>
+
+                        <div class="col-12">
+                            {{ form.address|as_crispy_field }}
+                        </div>
+
+                        <div class="col-12">
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+
+                        <div class="col-12">
+                            {{ form.is_active|as_crispy_field }}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer d-flex justify-content-between">
+                <a href="{% url 'suppliers:supplier_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-primary" form="supplier-form">
+                    <i class="bi bi-check-lg me-1"></i> Save Supplier
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Attach the footer submit button to the form
+    document.addEventListener('DOMContentLoaded', function () {
+        var form = document.querySelector('form[method="post"]');
+        if (form) {
+            form.id = 'supplier-form';
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,3 @@
+"""
+MediPOS Medicines App.
+"""

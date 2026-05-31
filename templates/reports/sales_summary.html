@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sales Summary — MediPOS{% endblock %}
+{% block page_title %}Sales Summary Report{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-body-tertiary">
+    <h5 class="card-title mb-0"><i class="bi bi-funnel me-2"></i>Filter Options</h5>
+  </div>
+  <div class="card-body">
+    <form method="post" class="row g-3 align-items-end">
+      {% csrf_token %}
+      <div class="col-md-3">
+        <label for="{{ form.from_date.id_for_label }}" class="form-label">From Date</label>
+        {{ form.from_date }}
+      </div>
+      <div class="col-md-3">
+        <label for="{{ form.to_date.id_for_label }}" class="form-label">To Date</label>
+        {{ form.to_date }}
+      </div>
+      <div class="col-md-3">
+        <label for="payment_mode" class="form-label">Payment Mode</label>
+        <select name="payment_mode" class="form-select">
+          <option value="">All Payment Modes</option>
+          <option value="CASH">Cash</option>
+          <option value="CARD">Card</option>
+          <option value="MOBILE">Mobile Banking</option>
+          <option value="MIXED">Mixed</option>
+        </select>
+      </div>
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-search me-1"></i>Generate Report
+        </button>
+        {% if has_results %}
+        <button type="submit" name="export" value="excel" class="btn btn-outline-success">
+          <i class="bi bi-file-earmark-excel me-1"></i>Excel
+        </button>
+        <button type="submit" name="export" value="pdf" class="btn btn-outline-danger">
+          <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+        </button>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if has_results %}
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-3 col-md-6">
+    <div class="card shadow-sm border-primary">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <p class="text-muted mb-1 small">Total Sales</p>
+            <h3 class="mb-0">{{ total_count }}</h3>
+          </div>
+          <div class="text-primary"><i class="bi bi-cart-check" style="font-size: 2rem;"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="card shadow-sm border-success">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <p class="text-muted mb-1 small">Total Revenue</p>
+            <h3 class="mb-0">৳ {{ total_revenue|floatformat:2 }}</h3>
+          </div>
+          <div class="text-success"><i class="bi bi-cash-stack" style="font-size: 2rem;"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="card shadow-sm border-info">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <p class="text-muted mb-1 small">Avg Sale</p>
+            <h3 class="mb-0">৳ {{ avg_sale|floatformat:2 }}</h3>
+          </div>
+          <div class="text-info"><i class="bi bi-calculator" style="font-size: 2rem;"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="card shadow-sm border-warning">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <p class="text-muted mb-1 small">Items Sold</p>
+            <h3 class="mb-0">{{ total_items }}</h3>
+          </div>
+          <div class="text-warning"><i class="bi bi-box-seam" style="font-size: 2rem;"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Mode Breakdown -->
+{% if payment_breakdown %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-body-tertiary">
+    <h5 class="card-title mb-0"><i class="bi bi-wallet2 me-2"></i>Payment Mode Breakdown</h5>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      {% for pm in payment_breakdown %}
+      <div class="col-md-3">
+        <div class="border rounded p-3 text-center">
+          <h6 class="text-muted">{{ pm.payment_mode }}</h6>
+          <p class="mb-1 fw-bold">{{ pm.count }} sales</p>
+          <p class="mb-0 text-success">৳ {{ pm.total|floatformat:2 }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Daily Breakdown Table -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-body-tertiary">
+    <h5 class="card-title mb-0"><i class="bi bi-calendar3 me-2"></i>Daily Breakdown ({{ from_date }} to {{ to_date }})</h5>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-striped table-hover mb-0">
+        <thead class="table-report-header">
+          <tr>
+            <th>Date</th>
+            <th>Invoices</th>
+            <th>Revenue</th>
+            <th>Avg Sale</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if daily_sales %}
+            {% for day in daily_sales %}
+            <tr>
+              <td>{{ day.day }}</td>
+              <td>{{ day.invoices }}</td>
+              <td>৳ {{ day.amount|floatformat:2 }}</td>
+              <td>৳ {% widthratio day.amount day.invoices 1 %}.00</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-4">
+                <i class="bi bi-info-circle me-1"></i>No daily data found.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="card shadow-sm">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-bar-chart-line display-3 mb-3 d-block"></i>
+    <h5>No Data to Display</h5>
+    <p>Select a date range and click "Generate Report" to view sales summary.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

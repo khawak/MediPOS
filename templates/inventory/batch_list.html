@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Inventory | MediPOS{% endblock %}
+
+{% block page_title %}Inventory Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Stats Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-primary">{{ stats.total }}</h5>
+                    <p class="card-text text-muted small mb-0">Total Active Batches</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-danger">{{ stats.expired }}</h5>
+                    <p class="card-text text-muted small mb-0">Expired Batches</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-warning">{{ stats.expiring_30 }}</h5>
+                    <p class="card-text text-muted small mb-0">Expiring ≤ 30 Days</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-info">{{ stats.expiring_60 }}</h5>
+                    <p class="card-text text-muted small mb-0">Expiring ≤ 60 Days</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        {% if user.role == 'ADMIN' or user.role == 'PHARMACIST' %}
+        <a href="{% url 'inventory:stock_in' %}" class="btn btn-success">
+            <i class="bi bi-plus-circle me-1"></i> Add Stock
+        </a>
+        <a href="{% url 'inventory:stock_adjustment' %}" class="btn btn-warning">
+            <i class="bi bi-pencil-square me-1"></i> Adjustment
+        </a>
+        {% endif %}
+        <a href="{% url 'inventory:stock_ledger_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-journal-text me-1"></i> Stock Ledger
+        </a>
+    </div>
+
+    <!-- Filter Panel -->
+    <div class="card material-card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-funnel me-1"></i> Filters</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    {{ filter.form.search }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ filter.form.supplier_search.label }}</label>
+                    {{ filter.form.supplier_search }}
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ filter.form.expiry_status.label }}</label>
+                    {{ filter.form.expiry_status }}
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check mt-4">
+                        {{ filter.form.is_active }}
+                        <label class="form-check-label small" for="{{ filter.form.is_active.id_for_label }}">
+                            {{ filter.form.is_active.label }}
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'inventory:batch_list' %}" class="btn btn-outline-secondary w-100"
+                       title="Clear Filters">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Batches Table -->
+    <div class="card material-card" id="batch-table-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-boxes me-1"></i> Batches</h6>
+            <span class="badge bg-secondary rounded-pill">{{ page_obj.paginator.count }} batch(es)</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Medicine</th>
+                            <th>Batch No</th>
+                            <th>Supplier</th>
+                            <th>Qty</th>
+                            <th>Expiry Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for batch in batches %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'medicines:medicine_detail' batch.medicine.pk %}"
+                                   class="text-decoration-none">
+                                    {{ batch.medicine.name }}
+                                </a>
+                            </td>
+                            <td>{{ batch.batch_no }}</td>
+                            <td>{{ batch.supplier.name|default:'—' }}</td>
+                            <td>{{ batch.quantity }}</td>
+                            <td>{{ batch.expiry_date|date:'d M Y' }}</td>
+                            <td>
+                                {% if batch.is_expired %}
+                                    <span class="badge bg-dark">Expired</span>
+                                {% elif batch.is_expiring_critical %}
+                                    <span class="badge bg-danger">≤30 Days</span>
+                                {% elif batch.is_expiring_soon %}
+                                    <span class="badge bg-warning text-dark">≤60 Days</span>
+                                {% else %}
+                                    <span class="badge bg-success">OK</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'inventory:batch_detail' batch.pk %}"
+                                   class="btn btn-sm btn-outline-primary"
+                                   title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if user.role == 'ADMIN' %}
+                                <a href="{% url 'inventory:batch_edit' batch.pk %}"
+                                   class="btn btn-sm btn-outline-warning"
+                                   title="Edit Batch">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                                No batches found matching your filters.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="card-footer" id="batch-pagination">
+            <div class="d-flex justify-content-center align-items-center flex-wrap gap-3">
+                <nav aria-label="Batch pagination">
+                    <ul class="pagination mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                               title="First">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                               title="Previous">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                               title="Next">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                               title="Last">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                <span class="badge bg-secondary fs-6">{{ page_obj.paginator.count }} batch{{ page_obj.paginator.count|pluralize }}</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/**
+ * Real-time AJAX filtering for the inventory batch list.
+ *
+ * On each keypress (search, supplier — debounced 300ms) or change
+ * (expiry status, active checkbox), fetch the filtered results via
+ * AJAX and replace only the table and pagination sections.
+ */
+(function () {
+    const form = document.querySelector('form[method="get"]');
+    if (!form) return;
+
+    const searchInput = form.querySelector('input[name="search"]');
+    const supplierInput = form.querySelector('input[name="supplier_search"]');
+    const expirySelect = form.querySelector('select[name="expiry_status"]');
+    const activeCheckbox = form.querySelector('input[name="is_active"]');
+
+    let debounceTimer;
+    let currentController = null;
+
+    function replaceSection(id, newElement) {
+        const existing = document.getElementById(id);
+        if (existing && newElement) {
+            existing.parentNode.replaceChild(newElement, existing);
+        }
+    }
+
+    function updateDOM(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Replace table card
+        replaceSection('batch-table-card', doc.getElementById('batch-table-card'));
+
+        // Replace pagination (or remove if none)
+        const oldPagination = document.getElementById('batch-pagination');
+        const newPagination = doc.getElementById('batch-pagination');
+        if (oldPagination && newPagination) {
+            oldPagination.parentNode.replaceChild(newPagination, oldPagination);
+        } else if (oldPagination && !newPagination) {
+            oldPagination.remove();
+        } else if (!oldPagination && newPagination) {
+            const tableCard = document.getElementById('batch-table-card');
+            if (tableCard && tableCard.parentNode) {
+                tableCard.parentNode.appendChild(newPagination);
+            }
+        }
+    }
+
+    function doFetch(params) {
+        if (currentController) {
+            currentController.abort();
+        }
+        currentController = new AbortController();
+
+        const url = window.location.pathname + '?' + params.toString();
+
+        fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            signal: currentController.signal
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error('Network error');
+                return response.text();
+            })
+            .then(function (html) {
+                updateDOM(html);
+                history.replaceState(null, '', url);
+            })
+            .catch(function (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('Filter fetch failed:', err);
+                }
+            });
+    }
+
+    function triggerFilter() {
+        const params = new URLSearchParams(new FormData(form));
+        params.delete('page');
+        doFetch(params);
+    }
+
+    function submitFormPage(pageNum) {
+        const params = new URLSearchParams(new FormData(form));
+        params.set('page', pageNum);
+        doFetch(params);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // --- Event listeners for filter controls ---
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(triggerFilter, 300);
+        });
+    }
+
+    if (supplierInput) {
+        supplierInput.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(triggerFilter, 300);
+        });
+    }
+
+    if (expirySelect) {
+        expirySelect.addEventListener('change', triggerFilter);
+    }
+
+    if (activeCheckbox) {
+        activeCheckbox.addEventListener('change', triggerFilter);
+    }
+
+    // --- Delegate pagination clicks to AJAX ---
+    document.addEventListener('click', function (e) {
+        var link = e.target.closest('.page-link');
+        if (!link) return;
+        if (!link.closest('#batch-pagination')) return;
+        e.preventDefault();
+        var href = link.getAttribute('href');
+        if (!href) return;
+        var url = new URL(href, window.location.origin);
+        var page = url.searchParams.get('page');
+        if (page) {
+            submitFormPage(page);
+        }
+    });
+
+})();
+</script>
+{% endblock %}

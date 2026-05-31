@@ -1,0 +1,400 @@
+{% extends 'base.html' %}
+{% load sale_tags %}
+
+{% block title %}Sales History — MediPOS{% endblock %}
+{% block page_title %}Sales History{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Material card */
+    .material-card {
+        border: none;
+        border-radius: 0.75rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: box-shadow 0.25s ease;
+    }
+    .material-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .material-card .card-header {
+        background: transparent;
+        border-bottom: 1px solid var(--bs-border-color);
+        padding: 1.25rem 1.5rem;
+        border-radius: 0.75rem 0.75rem 0 0;
+    }
+    .material-card .card-body.p-0 {
+        border-radius: 0;
+    }
+    .material-card .card-footer {
+        background: transparent;
+        border-top: 1px solid var(--bs-border-color);
+        padding: 1rem 1.5rem;
+        border-radius: 0 0 0.75rem 0.75rem;
+    }
+
+    /* Table styling */
+    .material-card .table {
+        margin-bottom: 0;
+    }
+    .material-card .table th {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--bs-secondary-color);
+        border-top: none;
+        font-weight: 600;
+    }
+    .material-card .table td {
+        padding: 0.75rem 1rem;
+    }
+    .material-card .table tbody tr {
+        transition: background-color 0.15s ease;
+    }
+    .material-card .table tbody tr:hover {
+        background-color: var(--bs-tertiary-bg);
+    }
+
+    /* Filter form labels */
+    .filter-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        font-weight: 600;
+        color: var(--bs-secondary-color);
+    }
+
+    /* Action icon buttons */
+    .btn-action {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border: 1px solid var(--bs-border-color);
+        background: transparent;
+        color: var(--bs-secondary-color);
+        transition: all 0.2s ease;
+    }
+    .btn-action:hover {
+        background: var(--bs-primary);
+        color: #fff;
+        border-color: var(--bs-primary);
+    }
+
+    /* Pagination */
+    .pagination .page-link {
+        border-radius: 0.375rem;
+        margin: 0 2px;
+        border: none;
+        transition: all 0.2s ease;
+    }
+    .pagination .page-item.active .page-link {
+        border-radius: 0.375rem;
+    }
+
+    [data-bs-theme="dark"] .material-card {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    [data-bs-theme="dark"] .material-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card material-card">
+    <!-- Filter panel -->
+    <div class="card-header">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label class="filter-label d-block mb-1">Date From</label>
+                <input type="date" name="date_from" class="form-control form-control-sm"
+                       value="{{ current_filters.date_from }}">
+            </div>
+            <div class="col-md-2">
+                <label class="filter-label d-block mb-1">Date To</label>
+                <input type="date" name="date_to" class="form-control form-control-sm"
+                       value="{{ current_filters.date_to }}">
+            </div>
+            <div class="col-md-2">
+                <label class="filter-label d-block mb-1">Payment Mode</label>
+                <select name="payment_mode" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for value, label in payment_mode_choices %}
+                        <option value="{{ value }}" {% if current_filters.payment_mode == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="filter-label d-block mb-1">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="filter-label d-block mb-1">Invoice #</label>
+                <input type="text" name="q" class="form-control form-control-sm"
+                       placeholder="Search invoice..." value="{{ current_filters.q }}">
+            </div>
+            <div class="col-md-2 d-flex flex-column gap-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100 rounded-pill">
+                    <i class="bi bi-funnel-fill me-1"></i> Filter
+                </button>
+                <a href="{% url 'sales:sale_list' %}" class="btn btn-outline-secondary btn-sm w-100 rounded-pill">
+                    <i class="bi bi-x-circle me-1"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Stats summary row — Material Dashboard style -->
+    <div class="card-header border-bottom py-3 px-3 bg-body-tertiary">
+        <div class="row g-3">
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width:42px; height:42px; flex-shrink:0;">
+                        <i class="bi bi-receipt text-primary fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="stat-card-label">Total Sales</div>
+                        <div class="stat-card-value">{{ page_obj.paginator.count }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center" style="width:42px; height:42px; flex-shrink:0;">
+                        <i class="bi bi-check-circle text-success fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="stat-card-label">Completed</div>
+                        <div class="stat-card-value text-success">{{ completed_count }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-info bg-opacity-10 d-flex align-items-center justify-content-center" style="width:42px; height:42px; flex-shrink:0;">
+                        <i class="bi bi-box-seam text-info fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="stat-card-label">Items Sold</div>
+                        <div class="stat-card-value text-info">{{ total_items_sold }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width:42px; height:42px; flex-shrink:0;">
+                        <i class="bi bi-currency-dollar text-primary fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="stat-card-label">Revenue</div>
+                        <div class="stat-card-value">৳ {{ total_revenue|floatformat:0 }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center" style="width:42px; height:42px; flex-shrink:0;">
+                        <i class="bi bi-graph-up text-warning fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="stat-card-label">Avg. / Sale</div>
+                        <div class="stat-card-value text-warning">
+                            {% if completed_count > 0 %}
+                                ৳ {{ avg_revenue|floatformat:0 }}
+                            {% else %}
+                                ৳ 0
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle {% if total_dues > 0 %}bg-danger{% else %}bg-secondary{% endif %} bg-opacity-10 d-flex align-items-center justify-content-center" style="width:42px; height:42px; flex-shrink:0;">
+                        <i class="bi bi-exclamation-triangle {% if total_dues > 0 %}text-danger{% else %}text-muted{% endif %} fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="stat-card-label">Total Dues</div>
+                        <div class="stat-card-value {% if total_dues > 0 %}text-danger{% else %}text-muted{% endif %}">
+                            ৳ {{ total_dues|floatformat:0 }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table header with total count -->
+    <div class="card-header d-flex justify-content-between align-items-center py-2">
+        <small class="text-muted">
+            {% if is_paginated %}
+                Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+            {% else %}
+                {{ page_obj.paginator.count }} sale{{ page_obj.paginator.count|pluralize }}
+            {% endif %}
+        </small>
+        <span class="badge bg-primary rounded-pill fs-6">
+            {{ page_obj.paginator.count }} sale{{ page_obj.paginator.count|pluralize }}
+        </span>
+    </div>
+
+    <!-- Sales table -->
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Invoice No</th>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th class="text-center">Items</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Cash</th>
+                        <th class="text-end">Dues</th>
+                        <th>Payment Mode</th>
+                        <th>Status</th>
+                        <th class="text-center" style="width:120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in sales %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'sales:sale_detail' sale.pk %}" class="fw-semibold text-decoration-none">
+                                    {{ sale.invoice_no }}
+                                </a>
+                            </td>
+                            <td class="text-nowrap">
+                                <div class="small">{{ sale.sale_date|date:"M d, Y" }}</div>
+                                <small class="text-muted">{{ sale.sale_date|date:"h:i A" }}</small>
+                            </td>
+                            <td>{{ sale.customer.name|default:"Walk-in" }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill">{{ sale.total_items }}</span>
+                            </td>
+                            <td class="text-end fw-semibold">{{ sale.grand_total|currency_bdt }}</td>
+                            <td class="text-end">
+                                <span class="text-success">{{ sale.amount_paid|currency_bdt }}</span>
+                            </td>
+                            <td class="text-end">
+                                {% if sale.due_amount > 0 %}
+                                    <span class="text-danger fw-semibold">{{ sale.due_amount|currency_bdt }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill">
+                                    {{ sale.get_payment_mode_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if sale.status == 'COMPLETED' %}
+                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill">Completed</span>
+                                {% elif sale.status == 'HELD' %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill">Held</span>
+                                {% elif sale.status == 'CANCELLED' %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill">Cancelled</span>
+                                {% elif sale.status == 'REFUNDED' %}
+                                    <span class="badge bg-info bg-opacity-10 text-info rounded-pill">Refunded</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center text-nowrap">
+                                <a href="{% url 'sales:sale_detail' sale.pk %}"
+                                   class="btn-action me-1" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'sales:invoice_detail' sale.pk %}"
+                                   class="btn-action me-1" title="Invoice">
+                                    <i class="bi bi-file-text"></i>
+                                </a>
+                                <a href="{% url 'sales:invoice_print' sale.pk %}"
+                                   class="btn-action" title="Print A4">
+                                    <i class="bi bi-printer"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center text-muted py-5">
+                                <i class="bi bi-receipt fs-1 d-block mb-2 opacity-50"></i>
+                                No sales found matching your filters.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+        <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+                </small>
+                <nav aria-label="Sales pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="First">
+                                    <i class="bi bi-chevron-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-double-left"></i></span></li>
+                            <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Last">
+                                    <i class="bi bi-chevron-double-right"></i>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
+                            <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-double-right"></i></span></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

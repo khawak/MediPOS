@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Print PO {{ po.po_number }} — MediPOS{% endblock %}
+{% block page_title %}Purchase Order{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Print-only styles */
+    @media print {
+        body {
+            background: #fff !important;
+            font-size: 12px;
+        }
+        #wrapper {
+            display: block !important;
+        }
+        #sidebar, #sidebarToggle, .navbar, footer, .d-print-none,
+        .toast-container, .alert, .btn-close {
+            display: none !important;
+        }
+        #page-content-wrapper {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .card {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .card-body {
+            padding: 0 !important;
+        }
+        .container-fluid {
+            padding: 0 !important;
+        }
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+    }
+
+    @media screen {
+        .print-message {
+            display: block;
+        }
+    }
+    @media print {
+        .print-message {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="print-message alert alert-info text-center d-print-none mb-3">
+    <i class="bi bi-printer me-1"></i> Print dialog should open automatically.
+    If not, press <strong>Ctrl+P</strong> or click the button below.
+    <br>
+    <button class="btn btn-primary btn-sm mt-2" onclick="window.print();">
+        <i class="bi bi-printer"></i> Print Now
+    </button>
+    <a href="{% url 'purchases:po_list' %}" class="btn btn-outline-secondary btn-sm mt-2">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- A4 Purchase Order (printable) -->
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <!-- Shop Header -->
+                <div class="text-center border-bottom pb-3 mb-3">
+                    {% if shop_settings.shop_logo %}
+                    <img src="{{ shop_settings.shop_logo.url }}"
+                         alt="{{ shop_settings.shop_name }}"
+                         class="mb-2"
+                         style="max-height: 60px;">
+                    {% endif %}
+                    <h4 class="fw-bold mb-1">{{ shop_settings.shop_name }}</h4>
+                    {% if shop_settings.shop_address %}
+                    <p class="text-muted mb-0 small">{{ shop_settings.shop_address }}</p>
+                    {% endif %}
+                    <p class="text-muted mb-0 small">
+                        {% if shop_settings.shop_phone %}Phone: {{ shop_settings.shop_phone }}{% endif %}
+                        {% if shop_settings.shop_phone and shop_settings.shop_email %} | {% endif %}
+                        {% if shop_settings.shop_email %}Email: {{ shop_settings.shop_email }}{% endif %}
+                    </p>
+                </div>
+
+                <!-- PO Title & Status -->
+                <div class="text-center mb-3">
+                    <h3 class="fw-bold text-uppercase">Purchase Order</h3>
+                    <h5 class="text-primary">{{ po.po_number }}</h5>
+                    {% if po.status == 'DRAFT' %}
+                        <span class="badge bg-secondary fs-6 px-3 py-1">Draft</span>
+                    {% elif po.status == 'ORDERED' %}
+                        <span class="badge bg-primary fs-6 px-3 py-1">Ordered</span>
+                    {% elif po.status == 'RECEIVED' %}
+                        <span class="badge bg-success fs-6 px-3 py-1">Received</span>
+                    {% elif po.status == 'CANCELLED' %}
+                        <span class="badge bg-dark fs-6 px-3 py-1">Cancelled</span>
+                    {% endif %}
+                </div>
+
+                <!-- Supplier & Order Info -->
+                <div class="row mb-4">
+                    <div class="col-6">
+                        <h6 class="fw-bold border-bottom pb-1">Supplier</h6>
+                        <table class="table table-sm table-borderless mb-0">
+                            <tr>
+                                <td class="fw-bold">{{ po.supplier.name }}</td>
+                            </tr>
+                            {% if po.supplier.contact_person %}
+                            <tr>
+                                <td><small class="text-muted">Contact: {{ po.supplier.contact_person }}</small></td>
+                            </tr>
+                            {% endif %}
+                            {% if po.supplier.phone %}
+                            <tr>
+                                <td><small class="text-muted">Phone: {{ po.supplier.phone }}</small></td>
+                            </tr>
+                            {% endif %}
+                            {% if po.supplier.email %}
+                            <tr>
+                                <td><small class="text-muted">Email: {{ po.supplier.email }}</small></td>
+                            </tr>
+                            {% endif %}
+                            {% if po.supplier.address %}
+                            <tr>
+                                <td><small class="text-muted">{{ po.supplier.address }}</small></td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="fw-bold border-bottom pb-1">Order Details</h6>
+                        <table class="table table-sm table-borderless mb-0">
+                            <tr>
+                                <th class="text-muted small" style="width: 45%;">Order Date:</th>
+                                <td>{{ po.order_date|date:"F d, Y" }}</td>
+                            </tr>
+                            {% if po.expected_delivery_date %}
+                            <tr>
+                                <th class="text-muted small">Expected Delivery:</th>
+                                <td>{{ po.expected_delivery_date|date:"F d, Y" }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <th class="text-muted small">Created By:</th>
+                                <td>{{ po.created_by.get_full_name|default:po.created_by.username|default:"—" }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted small">Created:</th>
+                                <td>{{ po.created_at|date:"M d, Y H:i" }}</td>
+                            </tr>
+                            {% if po.status == 'RECEIVED' and po.received_by %}
+                            <tr>
+                                <th class="text-muted small">Received By:</th>
+                                <td>{{ po.received_by.get_full_name|default:po.received_by.username }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <div class="mb-3">
+                    <h6 class="fw-bold border-bottom pb-1">Items ({{ items.count|default:po.items_count }})</h6>
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 5%;">#</th>
+                                <th style="width: 32%;">Medicine</th>
+                                <th style="width: 10%;" class="text-center">Qty</th>
+                                <th style="width: 15%;" class="text-end">Unit Price (৳)</th>
+                                <th style="width: 18%;" class="text-end">Line Total (৳)</th>
+                                <th style="width: 10%;">Batch No</th>
+                                <th style="width: 10%;">Expiry</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td class="small">{{ forloop.counter }}</td>
+                                <td>
+                                    <span class="fw-semibold">{{ item.medicine.name }}</span>
+                                    {% if item.medicine.brand %}
+                                        <br><small class="text-muted">{{ item.medicine.brand }}</small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end">{{ item.unit_price|floatformat:2 }}</td>
+                                <td class="text-end fw-semibold">{{ item.line_total|floatformat:2 }}</td>
+                                <td class="small">{{ item.batch_no|default:"—" }}</td>
+                                <td class="small">
+                                    {% if item.expiry_date %}
+                                        {{ item.expiry_date|date:"d M Y" }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-3">No items in this purchase order.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="4" class="text-end fw-bold">Grand Total:</td>
+                                <td class="text-end fw-bold fs-6">৳{{ po.total_amount|floatformat:2 }}</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Notes -->
+                {% if po.notes %}
+                <div class="mb-3">
+                    <h6 class="fw-bold border-bottom pb-1">Notes</h6>
+                    <p class="mb-0 small" style="white-space: pre-wrap;">{{ po.notes }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Footer -->
+                <div class="border-top pt-3 mt-4">
+                    <div class="row text-center small text-muted">
+                        <div class="col-4">
+                            <p class="mb-1 fw-bold">Prepared By</p>
+                            <p class="mb-0">{{ po.created_by.get_full_name|default:po.created_by.username|default:"—" }}</p>
+                        </div>
+                        <div class="col-4">
+                            <p class="mb-1 fw-bold">Supplier</p>
+                            <p class="mb-0">{{ po.supplier.name }}</p>
+                        </div>
+                        <div class="col-4">
+                            <p class="mb-1 fw-bold">Date</p>
+                            <p class="mb-0">{{ po.order_date|date:"F d, Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen-only buttons row -->
+        <div class="text-center mt-3 d-print-none">
+            <button class="btn btn-primary" onclick="window.print();">
+                <i class="bi bi-printer me-1"></i> Print Purchase Order
+            </button>
+            <a href="{% url 'purchases:po_detail' po.pk %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to PO
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-trigger print dialog on page load
+    window.addEventListener('load', function () {
+        window.print();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Purchase Orders — MediPOS{% endblock %}
+
+{% block page_title %}Purchase Orders{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">
+            <i class="bi bi-truck me-2"></i>Purchase Orders
+        </h2>
+        <p class="text-muted mb-0">Manage procurement and supplier purchase orders.</p>
+    </div>
+    <div>
+        <a href="{% url 'purchases:po_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Create PO
+        </a>
+    </div>
+</div>
+
+<!-- Filter Panel -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label for="id_status" class="form-label">{{ filter.form.status.label }}</label>
+                {{ filter.form.status }}
+            </div>
+            <div class="col-md-2">
+                <label for="id_supplier" class="form-label">{{ filter.form.supplier.label }}</label>
+                {{ filter.form.supplier }}
+            </div>
+            <div class="col-md-2">
+                <label for="id_date_from" class="form-label">{{ filter.form.date_from.label }}</label>
+                {{ filter.form.date_from }}
+            </div>
+            <div class="col-md-2">
+                <label for="id_date_to" class="form-label">{{ filter.form.date_to.label }}</label>
+                {{ filter.form.date_to }}
+            </div>
+            <div class="col-md-2">
+                <label for="id_search" class="form-label">{{ filter.form.search.label }}</label>
+                {{ filter.form.search }}
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-funnel me-1"></i> Filter
+                </button>
+                <a href="{% url 'purchases:po_list' %}" class="btn btn-outline-secondary w-100 mt-1">
+                    <i class="bi bi-x-circle me-1"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Purchase Orders Table -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>PO #</th>
+                        <th>Supplier</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th class="text-center">Items</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for po in purchase_orders %}
+                    <tr>
+                        <td>
+                            <a href="{{ po.get_absolute_url }}" class="fw-semibold text-decoration-none">
+                                {{ po.po_number }}
+                            </a>
+                        </td>
+                        <td>{{ po.supplier.name }}</td>
+                        <td>{{ po.order_date|date:"M d, Y" }}</td>
+                        <td>
+                            {% if po.status == 'DRAFT' %}
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-pencil me-1"></i>Draft
+                                </span>
+                            {% elif po.status == 'ORDERED' %}
+                                <span class="badge bg-primary">
+                                    <i class="bi bi-send me-1"></i>Ordered
+                                </span>
+                            {% elif po.status == 'RECEIVED' %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle me-1"></i>Received
+                                </span>
+                            {% elif po.status == 'CANCELLED' %}
+                                <span class="badge bg-dark">
+                                    <i class="bi bi-x-circle me-1"></i>Cancelled
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">{{ po.items_count }}</td>
+                        <td class="text-end fw-semibold">৳{{ po.total_amount|floatformat:2 }}</td>
+                        <td class="text-end">
+                            <a href="{{ po.get_absolute_url }}" class="btn btn-sm btn-outline-primary"
+                               title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if po.status == 'DRAFT' %}
+                            <a href="{% url 'purchases:po_edit' po.pk %}" class="btn btn-sm btn-outline-secondary"
+                               title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'purchases:po_print' po.pk %}" class="btn btn-sm btn-outline-info"
+                               title="Print PO" target="_blank">
+                                <i class="bi bi-printer"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                            No purchase orders found.
+                            {% if not filter.data %}
+                            <br>
+                            <a href="{% url 'purchases:po_create' %}" class="btn btn-primary btn-sm mt-2">
+                                <i class="bi bi-plus-lg me-1"></i> Create your first PO
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav class="mt-3">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page=1">
+                <i class="bi bi-chevron-double-left"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+        {% endif %}
+        <li class="page-item disabled">
+            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.paginator.num_pages }}">
+                <i class="bi bi-chevron-double-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

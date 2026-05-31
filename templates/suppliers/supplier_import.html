@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Import Suppliers — MediPOS{% endblock %}
+
+{% block page_title %}Import Suppliers{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Instructions Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>CSV Import Instructions
+                </h5>
+            </div>
+            <div class="card-body">
+                <ol class="mb-3">
+                    <li>
+                        <strong>Download the template</strong> using the button below.
+                    </li>
+                    <li>
+                        <strong>Fill in your supplier data</strong> following the column
+                        format. The header row must remain unchanged.
+                    </li>
+                    <li>
+                        <strong>Save as CSV</strong> (comma-separated values, UTF-8 encoding).
+                    </li>
+                    <li>
+                        <strong>Upload the file</strong> using the form below.
+                    </li>
+                </ol>
+
+                <div class="alert alert-secondary mb-0">
+                    <strong>CSV Format:</strong>
+                    <code>name, contact_person, phone, email, address, notes</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-upload me-2"></i>Upload CSV File
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-flex justify-content-between mt-3">
+                        <a href="{% url 'suppliers:supplier_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Suppliers
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-cloud-upload me-1"></i> Import Suppliers
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Download Template Card -->
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-file-earmark-spreadsheet display-3 text-success d-block mb-3"></i>
+                <h5>Need the CSV Template?</h5>
+                <p class="text-muted">
+                    Download the pre-formatted CSV template with the correct column headers.
+                </p>
+                <a href="{% url 'suppliers:download_template' %}" class="btn btn-outline-success">
+                    <i class="bi bi-download me-1"></i> Download CSV Template
+                </a>
+            </div>
+        </div>
+
+        <!-- Import Errors (if any from previous submission) -->
+        {% if import_errors %}
+            <div class="card shadow-sm mt-4 border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-exclamation-octagon me-2"></i>
+                        Import Errors ({{ import_errors|length }})
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for error in import_errors %}
+                            <li class="list-group-item list-group-item-danger small">
+                                <i class="bi bi-x-circle me-1"></i> {{ error }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

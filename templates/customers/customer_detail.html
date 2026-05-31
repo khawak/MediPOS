@@ -1,0 +1,176 @@
+﻿{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ customer.name }} — MediPOS{% endblock %}
+
+{% block page_title %}Customer Details{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Main Detail Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person me-2"></i>{{ customer.name }}
+                </h5>
+                <div>
+                    {% if customer.is_active %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-check-circle me-1"></i>Active
+                        </span>
+                    {% else %}
+                        <span class="badge bg-danger">
+                            <i class="bi bi-x-circle me-1"></i>Inactive
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Col 1 -->
+                    <div class="col-md-6">
+                        <table class="table table-sm table-borderless">
+                            <tbody>
+                                <tr>
+                                    <td class="text-muted" style="width: 40%;">Phone</td>
+                                    <td class="fw-semibold">{{ customer.phone }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Email</td>
+                                    <td>
+                                        {% if customer.email %}
+                                            <a href="mailto:{{ customer.email }}">{{ customer.email }}</a>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Loyalty Points</td>
+                                    <td>
+                                        <span class="badge bg-info fs-6">
+                                            <i class="bi bi-star-fill me-1"></i>{{ customer.loyalty_points }}
+                                        </span>
+                                        <small class="text-muted ms-1">
+                                            ({{ customer.loyalty_value }} BDT)
+                                        </small>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Balance</td>
+                                    <td>
+                                        {% if customer.balance > 0 %}
+                                            <span class="badge bg-success fs-6">
+                                                <i class="bi bi-cash-coin me-1"></i>Advance: ৳ {{ customer.balance|floatformat:2 }}
+                                            </span>
+                                        {% elif customer.balance < 0 %}
+                                            <span class="badge bg-danger fs-6">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>Dues: ৳ {{ customer.balance|stringformat:"s"|slice:"1:" }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary fs-6">Settled</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Col 2 -->
+                    <div class="col-md-6">
+                        <table class="table table-sm table-borderless">
+                            <tbody>
+                                <tr>
+                                    <td class="text-muted" style="width: 40%;">Created</td>
+                                    <td>{{ customer.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Last Updated</td>
+                                    <td>{{ customer.updated_at|date:"M d, Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Total Purchases</td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ customer.total_purchases }}</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {% if customer.address %}
+                <hr>
+                <h6 class="text-muted">Address</h6>
+                <p class="mb-0">{{ customer.address|linebreaksbr }}</p>
+                {% endif %}
+
+                {% if customer.notes %}
+                <hr>
+                <h6 class="text-muted">Notes</h6>
+                <p class="mb-0">{{ customer.notes|linebreaksbr }}</p>
+                {% endif %}
+            </div>
+            <div class="card-footer d-flex justify-content-between">
+                <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back to List
+                </a>
+                <div>
+                    <a href="{% url 'payments:payment_create' content_type_slug='customer' object_id=customer.pk %}"
+                       class="btn btn-success">
+                        <i class="bi bi-cash-coin me-1"></i> Payment Record
+                    </a>
+                    <a href="{% url 'customers:customer_edit' customer.pk %}" class="btn btn-warning">
+                        <i class="bi bi-pencil me-1"></i> Edit
+                    </a>
+                    <a href="{% url 'customers:customer_delete' customer.pk %}" class="btn btn-danger">
+                        <i class="bi bi-trash-fill me-1"></i> Delete
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar: Payment History -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-cash-stack me-2"></i>Payment History
+                </h6>
+                <a href="{% url 'payments:payment_list' %}?type=customer"
+                   class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if transactions %}
+                <div class="list-group list-group-flush">
+                    {% for tx in transactions %}
+                    <div class="list-group-item px-3 py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-semibold text-success">৳ {{ tx.amount|floatformat:2 }}</span>
+                                <small class="text-muted ms-1">
+                                    {% if tx.transaction_type == 'PAYMENT' %}Payment{% else %}Advance{% endif %}
+                                    · {{ tx.get_payment_method_display }}
+                                </small>
+                            </div>
+                            <small class="text-muted">{{ tx.created_at|date:"M d, Y" }}</small>
+                        </div>
+                        {% if tx.reference %}
+                        <small class="text-muted">{{ tx.reference }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-cash-coin display-4 text-muted"></i>
+                    <p class="text-muted mt-3 mb-0">No payment transactions yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

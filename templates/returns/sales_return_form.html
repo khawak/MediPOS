@@ -1,0 +1,324 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Process Return — MediPOS{% endblock %}
+
+{% block page_title %}Process Return{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'returns:sales_return_list' %}">Returns & Refunds</a></li>
+        <li class="breadcrumb-item active">Process Return</li>
+    </ol>
+</nav>
+
+{% if step == 'lookup' %}
+<!-- ===== STEP 1: Invoice Lookup ===== -->
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-search me-2"></i>Look Up Sale
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    Enter the invoice number of the sale to process a return.
+                </p>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ form.invoice_no.id_for_label }}" class="form-label">
+                            {{ form.invoice_no.label }}
+                        </label>
+                        {{ form.invoice_no }}
+                        {% if form.invoice_no.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.invoice_no.errors|join:", " }}
+                        </div>
+                        {% endif %}
+                        {% if form.invoice_no.help_text %}
+                        <div class="form-text">{{ form.invoice_no.help_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors|join:", " }}
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search me-1"></i> Look Up
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% elif step == 'select_items' %}
+<!-- ===== STEP 2: Select Items to Return ===== -->
+<div class="row">
+    <!-- Sale Summary Card -->
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-receipt me-2"></i>Sale Summary
+                </h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted" style="width: 40%;">Invoice No</td>
+                            <td class="fw-bold">{{ sale.invoice_no }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Customer</td>
+                            <td>
+                                {% if sale.customer %}
+                                {{ sale.customer.name }}
+                                {% else %}
+                                <span class="text-muted fst-italic">Walk-in Customer</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Sale Date</td>
+                            <td>{{ sale.sale_date|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Status</td>
+                            <td>
+                                {% if sale.status == 'COMPLETED' %}
+                                <span class="badge bg-success">Completed</span>
+                                {% elif sale.status == 'REFUNDED' %}
+                                <span class="badge bg-warning">Refunded</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Grand Total</td>
+                            <td class="fw-bold">৳{{ sale.grand_total|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Payment Mode</td>
+                            <td>{{ sale.get_payment_mode_display }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="mt-2">
+                    <a href="{% url 'sales:sale_detail' sale.pk %}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> View Original Sale
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Return Items Card -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-box-arrow-in-left me-2"></i>Select Items to Return
+                </h5>
+                <a href="{% url 'returns:sales_return_create' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back
+                </a>
+            </div>
+            <div class="card-body">
+                <form method="post" id="return-form" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="process_return" value="1">
+
+                    <!-- Items Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="return-items-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40px;">Return?</th>
+                                    <th>Medicine</th>
+                                    <th>Batch</th>
+                                    <th>Unit Price</th>
+                                    <th>Original Qty</th>
+                                    <th>Return Qty</th>
+                                    <th class="text-end">Line Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for field in items_form %}
+                                    {% if 'return_' in field.name and '_qty_' not in field.name %}
+                                        {# This is a return checkbox — find its matching qty field #}
+                                        {% with item_id=field.name|cut:"return_" %}
+                                        {% for sale_item in sale.items.all %}
+                                            {% if sale_item.pk|stringformat:"s" == item_id %}
+                                            <tr>
+                                                <td class="align-middle text-center">
+                                                    {{ field }}
+                                                </td>
+                                                <td class="align-middle">
+                                                    {{ sale_item.medicine.name }}
+                                                    {% if sale_item.medicine.generic_name %}
+                                                    <br><small class="text-muted">{{ sale_item.medicine.generic_name }}</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="align-middle">
+                                                    {% if sale_item.batch %}
+                                                    <span class="badge bg-info">{{ sale_item.batch.batch_no }}</span>
+                                                    <br><small class="text-muted">Exp: {{ sale_item.batch.expiry_date|date:"M Y" }}</small>
+                                                    {% else %}
+                                                    <span class="text-muted">—</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="align-middle">৳{{ sale_item.unit_price|floatformat:2 }}</td>
+                                                <td class="align-middle text-center">{{ sale_item.quantity }}</td>
+                                                <td class="align-middle">
+                                                    {% for qty_field in items_form %}
+                                                        {% if qty_field.name == 'return_qty_'|add:item_id %}
+                                                            {{ qty_field }}
+                                                            {% if qty_field.errors %}
+                                                            <div class="invalid-feedback d-block">{{ qty_field.errors|join:", " }}</div>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                                <td class="align-middle text-end">
+                                                    <span class="line-total" id="line-total-{{ item_id }}">৳0.00</span>
+                                                </td>
+                                            </tr>
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% endwith %}
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if items_form.non_field_errors %}
+                                <tr>
+                                    <td colspan="7">
+                                        <div class="alert alert-danger mb-0">
+                                            {{ items_form.non_field_errors|join:", " }}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="6" class="text-end fw-bold">Total Refund:</td>
+                                    <td class="text-end fw-bold text-danger fs-5" id="total-refund">৳0.00</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- Reason for Return -->
+                    <div class="mt-4">
+                        <label for="id_reason" class="form-label fw-bold">
+                            <i class="bi bi-chat-left-text me-1"></i>Reason for Return <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="reason" id="id_reason" class="form-control" rows="3"
+                                  placeholder="Describe why the items are being returned..."
+                                  required>{{ request.POST.reason }}</textarea>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="mt-3">
+                        <label for="id_notes" class="form-label">
+                            <i class="bi bi-sticky me-1"></i>Additional Notes
+                        </label>
+                        <textarea name="notes" id="id_notes" class="form-control" rows="2"
+                                  placeholder="Optional notes...">{{ request.POST.notes }}</textarea>
+                    </div>
+
+                    <!-- Submit -->
+                    <div class="mt-4 d-flex gap-2">
+                        <a href="{% url 'returns:sales_return_create' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-danger" id="process-return-btn">
+                            <i class="bi bi-arrow-return-left me-1"></i> Process Return
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const checkboxes = document.querySelectorAll('.return-checkbox');
+    const qtyInputs = document.querySelectorAll('.return-qty');
+    const totalRefundEl = document.getElementById('total-refund');
+    const processBtn = document.getElementById('process-return-btn');
+
+    function recalculateTotal() {
+        let total = 0;
+        checkboxes.forEach(function (cb) {
+            const itemId = cb.dataset.itemId;
+            const price = parseFloat(cb.dataset.price) || 0;
+            const qtyInput = document.querySelector(`.return-qty[data-item-id="${itemId}"]`);
+            const lineTotalEl = document.getElementById(`line-total-${itemId}`);
+
+            if (cb.checked && qtyInput) {
+                const qty = parseInt(qtyInput.value) || 0;
+                const lineTotal = price * qty;
+                total += lineTotal;
+                if (lineTotalEl) {
+                    lineTotalEl.textContent = '৳' + lineTotal.toFixed(2);
+                    lineTotalEl.classList.add('text-danger');
+                }
+            } else {
+                if (lineTotalEl) {
+                    lineTotalEl.textContent = '৳0.00';
+                    lineTotalEl.classList.remove('text-danger');
+                }
+            }
+        });
+        totalRefundEl.textContent = '৳' + total.toFixed(2);
+    }
+
+    // Attach event listeners
+    checkboxes.forEach(function (cb) {
+        cb.addEventListener('change', recalculateTotal);
+    });
+    qtyInputs.forEach(function (input) {
+        input.addEventListener('input', recalculateTotal);
+    });
+
+    // Validate before submit
+    if (processBtn) {
+        processBtn.addEventListener('click', function (e) {
+            const reason = document.getElementById('id_reason').value.trim();
+            if (!reason) {
+                e.preventDefault();
+                alert('Please provide a reason for the return.');
+                return;
+            }
+
+            let anyChecked = false;
+            checkboxes.forEach(function (cb) {
+                if (cb.checked) anyChecked = true;
+            });
+            if (!anyChecked) {
+                e.preventDefault();
+                alert('Please select at least one item to return.');
+                return;
+            }
+        });
+    }
+
+    // Initial calculation
+    recalculateTotal();
+});
+</script>
+{% endblock %}
