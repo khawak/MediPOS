@@ -9,4 +9,5 @@ openpyxl
 reportlab
 pytest-django
 pytest-cov
+dj_database_url
 # django-debug-toolbar  # dev only — uncomment for local development
