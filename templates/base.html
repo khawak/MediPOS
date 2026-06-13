@@ -24,12 +24,17 @@
 <body>
     <div class="d-flex" id="wrapper">
         <!-- ─── Sidebar ─────────────────────────────────────────────── -->
-        <aside class="sidebar bg-dark text-white" id="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header p-3 d-flex align-items-center justify-content-between">
-                <a href="{% url 'dashboard' %}" class="text-white text-decoration-none">
-                    <h4 class="mb-0"><i class="bi bi-capsule"></i> MediPOS</h4>
+                <a href="{% url 'dashboard' %}" class="sidebar-brand text-decoration-none d-flex align-items-center gap-2">
+                    {% if shop_settings.shop_logo %}
+                        <img src="{{ shop_settings.shop_logo.url }}" alt="{{ shop_settings.shop_name }}" class="sidebar-logo">
+                    {% else %}
+                        <i class="bi bi-capsule fs-4"></i>
+                    {% endif %}
+                    <h5 class="mb-0">{{ shop_settings.shop_name }}</h5>
                 </a>
-                <button class="btn btn-sm btn-outline-light d-lg-none" id="sidebarClose">
+                <button class="btn btn-sm sidebar-close-btn d-lg-none" id="sidebarClose">
                     <i class="bi bi-x-lg"></i>
                 </button>
             </div>
@@ -41,86 +46,153 @@
                     <!-- Dashboard -->
                     <li class="nav-item">
                         <a href="{% url 'dashboard' %}"
-                           class="nav-link text-white {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                            <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                           class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                            <i class="bi bi-speedometer2 me-2" style="color:#29b6f6;"></i> DASHBOARD
                         </a>
                     </li>
 
                     <!-- POS / Sales -->
                     <li class="nav-item">
                         <a href="{% url 'sales:pos' %}"
-                           class="nav-link text-white {% if 'sales' in request.resolver_match.namespace and request.resolver_match.url_name == 'pos' %}active{% endif %}">
-                            <i class="bi bi-cart4 me-2"></i> Point of Sale
+                           class="nav-link {% if 'sales' in request.resolver_match.namespace and request.resolver_match.url_name == 'pos' %}active{% endif %}">
+                            <i class="bi bi-cart4 me-2" style="color:#66bb6a;"></i> POINT OF SALE
                         </a>
                     </li>
 
                     <!-- Sales History -->
                     <li class="nav-item">
                         <a href="{% url 'sales:sale_list' %}"
-                           class="nav-link text-white {% if 'sales' in request.resolver_match.namespace and request.resolver_match.url_name == 'sale_list' %}active{% endif %}">
-                            <i class="bi bi-receipt me-2"></i> Sales History
+                           class="nav-link {% if 'sales' in request.resolver_match.namespace and request.resolver_match.url_name == 'sale_list' %}active{% endif %}">
+                            <i class="bi bi-receipt me-2" style="color:#ffa726;"></i> SALES HISTORY
                         </a>
                     </li>
 
-                    <!-- Medicines -->
+                    <!-- Medicines (with sub-menu) -->
+                    {% with ns=request.resolver_match.namespace %}
                     <li class="nav-item">
-                        <a href="{% url 'medicines:medicine_list' %}" class="nav-link text-white {% if 'medicines' in request.resolver_match.namespace %}active{% endif %}">
-                            <i class="bi bi-capsule-pill me-2"></i> Medicines
+                        <a href="#medicines-submenu"
+                           class="nav-link d-flex align-items-center justify-content-between {% if ns == 'medicines' %}active{% endif %}"
+                           data-bs-toggle="collapse"
+                           aria-expanded="{% if ns == 'medicines' %}true{% else %}false{% endif %}"
+                           aria-controls="medicines-submenu">
+                            <span>
+                                <i class="bi bi-capsule-pill me-2" style="color:#ff0400;"></i> MEDICINES
+                            </span>
+                            <i class="bi bi-chevron-down sidebar-chevron small"></i>
                         </a>
+                        <div class="collapse {% if ns == 'medicines' %}show{% endif %}" id="medicines-submenu">
+                            <ul class="nav flex-column ps-3 mt-1">
+                                <li class="nav-item">
+                                    <a href="{% url 'medicines:medicine_list' %}"
+                                       class="nav-link nav-link-sub {% if request.resolver_match.url_name == 'medicine_list' or request.resolver_match.url_name == 'medicine_detail' or request.resolver_match.url_name == 'medicine_add' or request.resolver_match.url_name == 'medicine_edit' %}active{% endif %}">
+                                        <i class="bi bi-file-medical me-2" style="color:#ff0088;"></i> All Medicines
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="{% url 'medicines:category_list' %}"
+                                       class="nav-link nav-link-sub {% if request.resolver_match.url_name == 'category_list' or request.resolver_match.url_name == 'category_add' or request.resolver_match.url_name == 'category_edit' or request.resolver_match.url_name == 'category_delete' %}active{% endif %}">
+                                        <i class="bi bi-tags me-2" style="color:#00ff26;"></i> Categories
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="{% url 'medicines:generic_name_list' %}"
+                                       class="nav-link nav-link-sub {% if request.resolver_match.url_name == 'generic_name_list' or request.resolver_match.url_name == 'generic_name_add' or request.resolver_match.url_name == 'generic_name_edit' or request.resolver_match.url_name == 'generic_name_delete' %}active{% endif %}">
+                                        <i class="bi bi-journal-medical me-2" style="color:#00e1ff;"></i> Generic Names
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </li>
+                    {% endwith %}
 
-                    <!-- Inventory -->
+                    <!-- Inventory (with sub-menu) -->
+                    {% with ns=request.resolver_match.namespace %}
                     <li class="nav-item">
-                        <a href="{% url 'inventory:batch_list' %}"
-                           class="nav-link text-white {% if 'inventory' in request.resolver_match.namespace %}active{% endif %}">
-                            <i class="bi bi-boxes me-2"></i> Inventory
+                        <a href="#inventory-submenu"
+                           class="nav-link d-flex align-items-center justify-content-between {% if ns == 'inventory' %}active{% endif %}"
+                           data-bs-toggle="collapse"
+                           aria-expanded="{% if ns == 'inventory' %}true{% else %}false{% endif %}"
+                           aria-controls="inventory-submenu">
+                            <span>
+                                <i class="bi bi-boxes me-2" style="color:#d900ff;"></i> INVENTORY
+                            </span>
+                            <i class="bi bi-chevron-down sidebar-chevron small"></i>
                         </a>
+                        <div class="collapse {% if ns == 'inventory' %}show{% endif %}" id="inventory-submenu">
+                            <ul class="nav flex-column ps-3 mt-1">
+                                <li class="nav-item">
+                                    <a href="{% url 'inventory:batch_list' %}"
+                                       class="nav-link nav-link-sub {% if request.resolver_match.url_name == 'batch_list' or request.resolver_match.url_name == 'batch_list_alias' or request.resolver_match.url_name == 'batch_detail' or request.resolver_match.url_name == 'batch_edit' %}active{% endif %}">
+                                        <i class="bi bi-list-ul me-2" style="color:#88ff00;"></i> All Inventory
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="{% url 'inventory:stock_in' %}"
+                                       class="nav-link nav-link-sub {% if request.resolver_match.url_name == 'stock_in' %}active{% endif %}">
+                                        <i class="bi bi-plus-square me-2" style="color:#d903ff;"></i> Add Stock
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="{% url 'inventory:stock_adjustment' %}"
+                                       class="nav-link nav-link-sub {% if request.resolver_match.url_name == 'stock_adjustment' %}active{% endif %}">
+                                        <i class="bi bi-sliders me-2" style="color:#00ff51;"></i> Adjustment
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="{% url 'inventory:stock_ledger_list' %}"
+                                       class="nav-link nav-link-sub {% if request.resolver_match.url_name == 'stock_ledger_list' or request.resolver_match.url_name == 'stock_ledger_medicine' %}active{% endif %}">
+                                        <i class="bi bi-journal-text me-2" style="color:#0073ff;"></i> Stock Ledger
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </li>
+                    {% endwith %}
 
                     <!-- Purchases -->
                     <li class="nav-item">
                         <a href="{% url 'purchases:po_list' %}"
-                           class="nav-link text-white {% if 'purchases' in request.resolver_match.namespace %}active{% endif %}">
-                            <i class="bi bi-truck me-2"></i> Purchases
+                           class="nav-link {% if 'purchases' in request.resolver_match.namespace %}active{% endif %}">
+                            <i class="bi bi-truck me-2" style="color:#42a5f5;"></i> PURCHASES
                         </a>
                     </li>
 
                     <!-- Suppliers -->
                     <li class="nav-item">
-                        <a href="{% url 'suppliers:supplier_list' %}" class="nav-link text-white {% if 'suppliers' in request.resolver_match.namespace %}active{% endif %}">
-                            <i class="bi bi-box-seam me-2"></i> Suppliers
+                        <a href="{% url 'suppliers:supplier_list' %}" class="nav-link {% if 'suppliers' in request.resolver_match.namespace %}active{% endif %}">
+                            <i class="bi bi-box-seam me-2" style="color:#ffca28;"></i> SUPPLIERS
                         </a>
                     </li>
 
                     <!-- Customers -->
                     <li class="nav-item">
                         <a href="{% url 'customers:customer_list' %}"
-                           class="nav-link text-white {% if 'customers' in request.resolver_match.namespace %}active{% endif %}">
-                            <i class="bi bi-people me-2"></i> Customers
+                           class="nav-link {% if 'customers' in request.resolver_match.namespace %}active{% endif %}">
+                            <i class="bi bi-people me-2" style="color:#26c6da;"></i> CUSTOMERES
                         </a>
                     </li>
 
                     <!-- Payments / Dues -->
                     <li class="nav-item">
                         <a href="{% url 'payments:due_dashboard' %}"
-                           class="nav-link text-white {% if 'payments' in request.resolver_match.namespace %}active{% endif %}">
-                            <i class="bi bi-cash-stack me-2"></i> Payments & Dues
+                           class="nav-link {% if 'payments' in request.resolver_match.namespace %}active{% endif %}">
+                            <i class="bi bi-cash-stack me-2" style="color:#9ccc65;"></i> PAYMENTS & DUES
                         </a>
                     </li>
 
                     <!-- Returns -->
                     <li class="nav-item">
                         <a href="{% url 'returns:sales_return_list' %}"
-                           class="nav-link text-white {% if 'returns' in request.resolver_match.namespace %}active{% endif %}">
-                            <i class="bi bi-arrow-return-left me-2"></i> Returns
+                           class="nav-link {% if 'returns' in request.resolver_match.namespace %}active{% endif %}">
+                            <i class="bi bi-arrow-return-left me-2" style="color:#ff3c00;"></i> RETURNS
                         </a>
                     </li>
 
                     <!-- Reports -->
                     <li class="nav-item">
                         <a href="{% url 'reports:report_dashboard' %}"
-                           class="nav-link text-white {% if 'reports' in request.resolver_match.namespace %}active{% endif %}">
-                            <i class="bi bi-bar-chart-line me-2"></i> Reports
+                           class="nav-link {% if 'reports' in request.resolver_match.namespace %}active{% endif %}">
+                            <i class="bi bi-bar-chart-line me-2" style="color:#d988ff;"></i> REPORTS
                         </a>
                     </li>
 
@@ -128,8 +200,8 @@
                     {% if user.is_authenticated and user.role == 'ADMIN' %}
                     <li class="nav-item">
                         <a href="{% url 'settings:settings_update' %}"
-                           class="nav-link text-white {% if 'settings' in request.resolver_match.namespace %}active{% endif %}">
-                            <i class="bi bi-gear me-2"></i> Settings
+                           class="nav-link {% if 'settings' in request.resolver_match.namespace %}active{% endif %}">
+                            <i class="bi bi-gear me-2" style="color:#fffb00;"></i> Settings
                         </a>
                     </li>
                     {% endif %}
