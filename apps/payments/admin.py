@@ -40,6 +40,7 @@ class PaymentTransactionAdmin(admin.ModelAdmin):
     )
     date_hierarchy = 'created_at'
     readonly_fields = ('created_at',)
+    list_per_page = 25
     inlines = [DueSettlementInline]
 
     fieldsets = (

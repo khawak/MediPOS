@@ -73,6 +73,36 @@ class Category(models.Model):
         return reverse('medicines:category_list')
 
 
+class GenericName(models.Model):
+    """
+    Controlled vocabulary of INN / generic drug names (e.g. Paracetamol, Amoxicillin).
+    """
+
+    name = models.CharField(
+        max_length=200,
+        unique=True,
+        verbose_name=_('name'),
+        help_text=_('International non-proprietary name (INN) of the drug.'),
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name=_('description'),
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('created at'))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_('updated at'))
+
+    class Meta:
+        verbose_name = _('Generic Name')
+        verbose_name_plural = _('Generic Names')
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse('medicines:generic_name_list')
+
+
 class Medicine(models.Model):
     """
     Medicine / product record in the pharmacy inventory.
@@ -101,11 +131,14 @@ class Medicine(models.Model):
         verbose_name=_('name'),
         help_text=_('Trade or brand name of the medicine.'),
     )
-    generic_name = models.CharField(
-        max_length=200,
+    generic_name = models.ForeignKey(
+        'GenericName',
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
+        related_name='medicines',
         verbose_name=_('generic name'),
-        help_text=_('Scientific or generic name (e.g., Paracetamol).'),
+        help_text=_('INN / generic drug name (e.g., Paracetamol).'),
     )
     brand = models.CharField(
         max_length=200,
@@ -201,7 +234,7 @@ class Medicine(models.Model):
             models.Index(fields=['barcode']),
             models.Index(fields=['name']),
         ]
-        unique_together = ['name', 'brand', 'generic_name']
+        unique_together = [['name', 'brand', 'generic_name']]
 
     def __str__(self):
         """Return name with brand if available, otherwise just the name."""

@@ -1,0 +1,115 @@
+{% load static %}
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:3rem">#</th>
+                        <th>Generic Name</th>
+                        <th class="text-center" style="width:6rem">Medicines</th>
+                        <th style="width:7rem">Added</th>
+                        <th class="text-end" style="width:6rem">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for gn in generic_names %}
+                    <tr>
+                        <td class="text-muted small">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                        <td>
+                            <span class="fw-semibold">{{ gn.name }}</span>
+                            {% if gn.description %}
+                                <br><small class="text-muted">{{ gn.description|truncatechars:60 }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary">{{ gn.medicine_count }}</span>
+                        </td>
+                        <td class="text-muted small">{{ gn.created_at|date:"M d, Y" }}</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'medicines:generic_name_edit' gn.pk %}"
+                                   class="btn btn-outline-primary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'medicines:generic_name_delete' gn.pk %}"
+                                   class="btn btn-outline-danger" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <i class="bi bi-inbox display-4 text-muted d-block mb-2"></i>
+                            <p class="text-muted mb-3">No generic names found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if is_paginated %}
+{% with current=page_obj.number total=page_obj.paginator.num_pages %}
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <nav>
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link gn-page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&q={{ search }}{% endif %}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
+            {% endif %}
+
+            {% if current > 4 %}
+            <li class="page-item">
+                <a class="page-link gn-page-link" href="?page=1{% if search %}&q={{ search }}{% endif %}">1</a>
+            </li>
+            {% if current > 5 %}
+            <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+            {% endif %}
+            {% endif %}
+
+            {% with start=current|add:"-3" end=current|add:"3" %}
+            {% for num in page_obj.paginator.page_range %}
+                {% if num >= start and num <= end %}
+                <li class="page-item {% if num == current %}active{% endif %}">
+                    <a class="page-link gn-page-link" href="?page={{ num }}{% if search %}&q={{ search }}{% endif %}">{{ num }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+            {% endwith %}
+
+            {% if current < total|add:"-3" %}
+            {% if current < total|add:"-4" %}
+            <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+            {% endif %}
+            <li class="page-item">
+                <a class="page-link gn-page-link" href="?page={{ total }}{% if search %}&q={{ search }}{% endif %}">{{ total }}</a>
+            </li>
+            {% endif %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link gn-page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&q={{ search }}{% endif %}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
+            {% endif %}
+        </ul>
+    </nav>
+    <span class="text-muted small">
+        {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+    </span>
+</div>
+{% endwith %}
+{% endif %}

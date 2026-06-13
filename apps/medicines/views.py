@@ -10,8 +10,9 @@ import io
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.db.models import F, Q
-from django.http import HttpResponse
+from django.db.models import Count, F, Q
+from django.http import HttpResponse, JsonResponse
+from django.views import View
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils.text import slugify
@@ -26,8 +27,8 @@ from django.views.generic import (
 )
 
 from .filters import MedicineFilter
-from .forms import CategoryForm, CategoryImportForm, MedicineForm, MedicineImportForm
-from .models import Category, Medicine
+from .forms import CategoryForm, CategoryImportForm, GenericNameForm, MedicineForm, MedicineImportForm
+from .models import Category, GenericName, Medicine
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -160,6 +161,94 @@ class CategoryDeleteView(LoginRequiredMixin, StaffEditorMixin, DeleteView):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Generic Name Views
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class GenericNameListView(LoginRequiredMixin, ListView):
+    model = GenericName
+    template_name = 'medicines/generic_name_list.html'
+    context_object_name = 'generic_names'
+    paginate_by = 50
+
+    def get_queryset(self):
+        queryset = GenericName.objects.annotate(
+            medicine_count=Count('medicines')
+        )
+        search = self.request.GET.get('q', '').strip()
+        if search:
+            queryset = queryset.filter(name__icontains=search)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search'] = self.request.GET.get('q', '').strip()
+        return context
+
+    def render_to_response(self, context, **kwargs):
+        if self.request.GET.get('partial') == '1':
+            from django.template.loader import render_to_string
+            from django.http import JsonResponse
+            html = render_to_string(
+                'medicines/generic_name_table.html',
+                context,
+                request=self.request,
+            )
+            pg = context['page_obj']
+            return JsonResponse({
+                'html': html,
+                'total': pg.paginator.count,
+                'page_info': f'Page {pg.number} of {pg.paginator.num_pages}',
+            })
+        return super().render_to_response(context, **kwargs)
+
+
+class GenericNameCreateView(LoginRequiredMixin, StaffEditorMixin, CreateView):
+    model = GenericName
+    form_class = GenericNameForm
+    template_name = 'medicines/generic_name_form.html'
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, _(f'Generic name "{self.object.name}" created successfully.'))
+        return response
+
+    def get_success_url(self):
+        return reverse_lazy('medicines:generic_name_list')
+
+
+class GenericNameUpdateView(LoginRequiredMixin, StaffEditorMixin, UpdateView):
+    model = GenericName
+    form_class = GenericNameForm
+    template_name = 'medicines/generic_name_form.html'
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, _(f'Generic name "{self.object.name}" updated successfully.'))
+        return response
+
+    def get_success_url(self):
+        return reverse_lazy('medicines:generic_name_list')
+
+
+class GenericNameDeleteView(LoginRequiredMixin, StaffEditorMixin, DeleteView):
+    model = GenericName
+    template_name = 'medicines/generic_name_confirm_delete.html'
+    success_url = reverse_lazy('medicines:generic_name_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['linked_count'] = self.object.medicines.count()
+        return context
+
+    def form_valid(self, form):
+        name = self.object.name
+        response = super().form_valid(form)
+        messages.success(self.request, _(f'Generic name "{name}" deleted successfully.'))
+        return response
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Medicine Views
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -251,8 +340,7 @@ class MedicineDeleteView(LoginRequiredMixin, StaffEditorMixin, DeleteView):
     template_name = 'medicines/medicine_confirm_delete.html'
     success_url = reverse_lazy('medicines:medicine_list')
 
-    def form_valid(self, form):
-        """Soft-delete: set is_active to False instead of removing the record."""
+    def _deactivate(self):
         self.object = self.get_object()
         self.object.is_active = False
         self.object.save(update_fields=['is_active'])
@@ -260,6 +348,15 @@ class MedicineDeleteView(LoginRequiredMixin, StaffEditorMixin, DeleteView):
             self.request,
             _(f'Medicine "{self.object.name}" has been deactivated.'),
         )
+
+    def delete(self, request, *args, **kwargs):
+        """Soft-delete for Django < 4.0 (post → delete)."""
+        self._deactivate()
+        return redirect(self.success_url)
+
+    def form_valid(self, form):
+        """Soft-delete for Django >= 4.0 (post → form_valid)."""
+        self._deactivate()
         return redirect(self.success_url)
 
 
@@ -573,3 +670,76 @@ def download_category_import_template(request):
         'attachment; filename="category_import_template.csv"'
     )
     return response
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AJAX Search Views — for medicine_form.html search widgets
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class GenericNameSearchView(LoginRequiredMixin, View):
+    """Return matching GenericName records as JSON for the medicine form search widget."""
+
+    def get(self, request):
+        query = request.GET.get('q', '').strip()
+        if not query:
+            return JsonResponse({'results': []})
+        qs = GenericName.objects.filter(name__icontains=query).order_by('name')[:30]
+        return JsonResponse({'results': [{'id': g.pk, 'name': g.name} for g in qs]})
+
+
+class CategorySearchView(LoginRequiredMixin, View):
+    """Return matching active Category records as JSON for the medicine form search widget."""
+
+    def get(self, request):
+        query = request.GET.get('q', '').strip()
+        if not query:
+            return JsonResponse({'results': []})
+        qs = Category.objects.filter(is_active=True, name__icontains=query).order_by('name')[:30]
+        return JsonResponse({'results': [{'id': c.pk, 'name': c.name} for c in qs]})
+
+
+class BrandSearchView(LoginRequiredMixin, View):
+    """Return distinct brand values matching query as JSON for the medicine form search widget."""
+
+    def get(self, request):
+        query = request.GET.get('q', '').strip()
+        if not query:
+            return JsonResponse({'results': []})
+        brands = (
+            Medicine.objects
+            .filter(brand__icontains=query)
+            .exclude(brand='')
+            .values_list('brand', flat=True)
+            .distinct()
+            .order_by('brand')[:30]
+        )
+        return JsonResponse({'results': [{'name': b} for b in brands]})
+
+
+class MedicinesByCategoryView(LoginRequiredMixin, View):
+    """Return medicines filtered by category as JSON."""
+
+    def get(self, request):
+        category_id = request.GET.get('category_id', '').strip()
+        if not category_id:
+            return JsonResponse({'results': []})
+        qs = Medicine.objects.filter(
+            is_active=True, category_id=category_id
+        ).order_by('name').values('id', 'name')[:100]
+        return JsonResponse({'results': list(qs)})
+
+
+class MedicineSearchView(LoginRequiredMixin, View):
+    """Return medicines matching a name query as JSON, optionally filtered by category."""
+
+    def get(self, request):
+        query = request.GET.get('q', '').strip()
+        category_id = request.GET.get('category_id', '').strip()
+        if not query:
+            return JsonResponse({'results': []})
+        qs = Medicine.objects.filter(is_active=True, name__icontains=query)
+        if category_id:
+            qs = qs.filter(category_id=category_id)
+        qs = qs.order_by('name').values('id', 'name')[:30]
+        return JsonResponse({'results': list(qs)})

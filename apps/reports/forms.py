@@ -80,9 +80,22 @@ class ReportFilterForm(DateRangeForm):
     )
     medicine = forms.ModelChoiceField(
         label=_('Medicine'),
-        queryset=Medicine.objects.filter(is_active=True),
+        queryset=Medicine.objects.none(),
         required=False,
         empty_label=_('All Medicines'),
         widget=forms.Select(attrs={'class': 'form-select'}),
         help_text=_('Filter by specific medicine.'),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.data and self.data.get(self.prefix + '-category' if self.prefix else 'category'):
+            category_id = self.data.get(self.prefix + '-category' if self.prefix else 'category')
+            self.fields['medicine'].queryset = Medicine.objects.filter(
+                is_active=True, category_id=category_id
+            )
+        elif self.data and self.data.get(self.prefix + '-medicine' if self.prefix else 'medicine'):
+            medicine_id = self.data.get(self.prefix + '-medicine' if self.prefix else 'medicine')
+            self.fields['medicine'].queryset = Medicine.objects.filter(
+                is_active=True, pk=medicine_id
+            )

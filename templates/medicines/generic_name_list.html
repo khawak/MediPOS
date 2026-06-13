@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Generic Names — MediPOS{% endblock %}
+{% block page_title %}Generic Names{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-journal-medical me-2"></i>Generic Names</h4>
+        <p class="text-muted small mb-0">INN / generic drug names (<span id="gn-total">{{ page_obj.paginator.count }}</span> total)</p>
+    </div>
+    <a href="{% url 'medicines:generic_name_add' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i> Add Generic Name
+    </a>
+</div>
+
+<!-- Search -->
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" id="gn-filter-form" class="row g-2 align-items-center">
+            <div class="col-md-5 position-relative">
+                <input type="text" name="q" id="q" class="form-control form-control-sm"
+                       placeholder="Search by name..." value="{{ search }}" autofocus autocomplete="off">
+                <span id="gn-spinner" class="position-absolute top-50 end-0 translate-middle-y me-2 d-none">
+                    <span class="spinner-border spinner-border-sm text-secondary" role="status"></span>
+                </span>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'medicines:generic_name_list' %}" class="btn btn-outline-secondary btn-sm" id="gn-clear-btn" {% if not search %}style="display:none"{% endif %}>
+                    <i class="bi bi-x-lg me-1"></i> Clear
+                </a>
+            </div>
+            <div class="col-auto ms-auto text-muted small" id="gn-page-info">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Table -->
+<div id="gn-table-wrap">
+{% include 'medicines/generic_name_table.html' %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const input      = document.getElementById('q');
+    const spinner    = document.getElementById('gn-spinner');
+    const clearBtn   = document.getElementById('gn-clear-btn');
+    const tableWrap  = document.getElementById('gn-table-wrap');
+    const pageInfo   = document.getElementById('gn-page-info');
+    const totalEl    = document.getElementById('gn-total');
+
+    let timer = null;
+    let controller = null;
+
+    function showSpinner(v) { spinner.classList.toggle('d-none', !v); }
+
+    function doFetch(q, page) {
+        if (controller) controller.abort();
+        controller = new AbortController();
+        showSpinner(true);
+
+        const params = new URLSearchParams();
+        if (q) params.set('q', q);
+        if (page && page > 1) params.set('page', page);
+        params.set('partial', '1');
+
+        fetch(window.location.pathname + '?' + params.toString(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            signal: controller.signal
+        })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+            tableWrap.innerHTML = data.html;
+            if (pageInfo) pageInfo.textContent = data.page_info;
+            if (totalEl)  totalEl.textContent  = data.total;
+            clearBtn.style.display = q ? '' : 'none';
+            history.replaceState(null, '', window.location.pathname + (params.toString() ? '?' + params.toString().replace('&partial=1','').replace('partial=1','') : ''));
+            bindPagination();
+        })
+        .catch(err => { if (err.name !== 'AbortError') console.error(err); })
+        .finally(() => showSpinner(false));
+    }
+
+    function bindPagination() {
+        tableWrap.querySelectorAll('.gn-page-link').forEach(a => {
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                const page = new URL(this.href, location.origin).searchParams.get('page') || 1;
+                doFetch(input.value.trim(), page);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+    }
+
+    input.addEventListener('input', function () {
+        clearTimeout(timer);
+        const q = this.value.trim();
+        timer = setTimeout(() => doFetch(q, 1), 300);
+    });
+
+    bindPagination();
+})();
+</script>
+{% endblock %}
+

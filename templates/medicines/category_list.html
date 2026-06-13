@@ -36,14 +36,12 @@
                     class="form-control"
                     placeholder="Search by name..."
                     value="{{ search }}"
+                    {% if search %}autofocus{% endif %}
                 >
             </div>
             <div class="col-auto">
-                <button type="submit" class="btn btn-outline-primary">
-                    <i class="bi bi-search me-1"></i> Search
-                </button>
                 {% if search %}
-                    <a href="{% url 'medicines:category_list' %}" class="btn btn-outline-secondary ms-1">
+                    <a href="{% url 'medicines:category_list' %}" class="btn btn-outline-secondary">
                         <i class="bi bi-x-lg me-1"></i> Clear
                     </a>
                 {% endif %}
@@ -152,4 +150,24 @@
         </ul>
     </nav>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const input = document.getElementById('q');
+        let timer;
+        input.addEventListener('keyup', function() {
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                input.closest('form').submit();
+            }, 400);
+        });
+        // Move cursor to end after autofocus
+        if (input.value) {
+            const len = input.value.length;
+            input.setSelectionRange(len, len);
+        }
+    });
+</script>
 {% endblock %}

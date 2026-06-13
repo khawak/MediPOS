@@ -56,6 +56,12 @@
         transform: translateY(-50%);
         display: none;
     }
+    .medicine-search-wrapper .dropdown-item {
+        color: var(--bs-body-color);
+    }
+    .medicine-search-wrapper .dropdown-item .med-meta {
+        color: var(--bs-secondary-color);
+    }
 </style>
 {% endblock %}
 
@@ -85,12 +91,9 @@
                         </div>
                         {% endif %}
 
-                        {# Hidden real select — keeps Django form binding intact #}
+                        {# Hidden real select — kept empty; value injected by AJAX search widget #}
                         <select name="{{ form.medicine.html_name }}" id="{{ form.medicine.id_for_label }}" style="display:none;" tabindex="-1">
                             <option value="">---------</option>
-                            {% for med in form.medicine.field.queryset %}
-                                <option value="{{ med.pk }}">{{ med.name }}</option>
-                            {% endfor %}
                         </select>
 
                         <div class="mb-3 medicine-search-wrapper">
@@ -116,7 +119,7 @@
                         </div>
 
                         <div class="mb-3 d-none" id="selectedMedicineInfo">
-                            <div class="d-flex align-items-center gap-2 p-2 bg-light rounded border">
+                            <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background-color: var(--bs-tertiary-bg);">
                                 <i class="bi bi-check-circle-fill text-success"></i>
                                 <div>
                                     <strong id="selectedMedName"></strong>

@@ -110,3 +110,4 @@ class SaleItemAdmin(admin.ModelAdmin):
     search_fields = ('sale__invoice_no', 'medicine__name')
     readonly_fields = ('line_total',)
     autocomplete_fields = ('sale', 'medicine', 'batch')
+    list_per_page = 25

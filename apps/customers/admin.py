@@ -26,3 +26,4 @@ class CustomerAdmin(admin.ModelAdmin):
     )
     search_fields = ('name', 'phone', 'email')
     list_filter = ('is_active',)
+    list_per_page = 25

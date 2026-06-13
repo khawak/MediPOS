@@ -21,26 +21,32 @@
         {{ form.to_date }}
       </div>
       <div class="col-md-3">
-        <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
-        {{ form.category }}
+        <label for="category-search" class="form-label">Category</label>
+        <input type="text" id="category-search" class="form-control" placeholder="Type to search..." autocomplete="off">
+        <input type="hidden" name="ps-category" id="id_ps-category" value="{{ form.category.value|default_if_none:'' }}">
+        <div id="category-results" class="list-group position-absolute" style="z-index:1050; display:none; max-height:200px; overflow-y:auto;"></div>
       </div>
       <div class="col-md-3">
-        <label for="{{ form.medicine.id_for_label }}" class="form-label">Medicine</label>
-        {{ form.medicine }}
+        <label for="medicine-search" class="form-label">Medicine</label>
+        <input type="text" id="medicine-search" class="form-control" placeholder="Type to search..." autocomplete="off">
+        <input type="hidden" name="ps-medicine" id="id_ps-medicine" value="{{ form.medicine.value|default_if_none:'' }}">
+        <div id="medicine-results" class="list-group position-absolute" style="z-index:1050; display:none; max-height:200px; overflow-y:auto;"></div>
       </div>
-      <div class="col-md-2 d-flex gap-2">
+      <div class="col-md-2 d-flex gap-2 align-items-end">
         <button type="submit" class="btn btn-primary">
-          <i class="bi bi-search me-1"></i>Generate
+          <i class="bi bi-search me-1"></i>Generate Report
         </button>
-        {% if has_results %}
+      </div>
+      {% if has_results %}
+      <div class="col-12 d-flex gap-2">
         <button type="submit" name="export" value="excel" class="btn btn-outline-success">
-          <i class="bi bi-file-earmark-excel"></i>
+          <i class="bi bi-file-earmark-excel me-1"></i>Export Excel
         </button>
         <button type="submit" name="export" value="pdf" class="btn btn-outline-danger">
-          <i class="bi bi-file-earmark-pdf"></i>
+          <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF
         </button>
-        {% endif %}
       </div>
+      {% endif %}
     </form>
   </div>
 </div>
@@ -138,4 +144,130 @@
   </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Category search
+    const catSearchInput = document.getElementById('category-search');
+    const catHiddenInput = document.getElementById('id_ps-category');
+    const catResultsDiv = document.getElementById('category-results');
+    let catTimer;
+
+    catSearchInput.addEventListener('input', function() {
+        clearTimeout(catTimer);
+        const query = this.value.trim();
+        if (query.length < 1) {
+            catResultsDiv.style.display = 'none';
+            catHiddenInput.value = '';
+            // Clear medicine too
+            medSearchInput.value = '';
+            medHiddenInput.value = '';
+            return;
+        }
+        catTimer = setTimeout(function() {
+            fetch('/medicines/search/categories/?q=' + encodeURIComponent(query))
+                .then(r => r.json())
+                .then(data => {
+                    catResultsDiv.innerHTML = '';
+                    if (data.results.length === 0) {
+                        catResultsDiv.style.display = 'none';
+                        return;
+                    }
+                    data.results.forEach(function(cat) {
+                        const item = document.createElement('a');
+                        item.href = '#';
+                        item.className = 'list-group-item list-group-item-action';
+                        item.textContent = cat.name;
+                        item.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            catSearchInput.value = cat.name;
+                            catHiddenInput.value = cat.id;
+                            catResultsDiv.style.display = 'none';
+                            // Clear medicine when category changes
+                            medSearchInput.value = '';
+                            medHiddenInput.value = '';
+                        });
+                        catResultsDiv.appendChild(item);
+                    });
+                    catResultsDiv.style.display = 'block';
+                });
+        }, 300);
+    });
+
+    catSearchInput.addEventListener('blur', function() {
+        setTimeout(function() { catResultsDiv.style.display = 'none'; }, 200);
+    });
+
+    catSearchInput.addEventListener('focus', function() {
+        if (catResultsDiv.children.length > 0) catResultsDiv.style.display = 'block';
+    });
+
+    catSearchInput.addEventListener('keyup', function() {
+        if (!this.value.trim()) {
+            catHiddenInput.value = '';
+            medSearchInput.value = '';
+            medHiddenInput.value = '';
+        }
+    });
+
+    // Medicine search
+    const medSearchInput = document.getElementById('medicine-search');
+    const medHiddenInput = document.getElementById('id_ps-medicine');
+    const medResultsDiv = document.getElementById('medicine-results');
+    let medTimer;
+
+    medSearchInput.addEventListener('input', function() {
+        clearTimeout(medTimer);
+        const query = this.value.trim();
+        if (query.length < 2) {
+            medResultsDiv.style.display = 'none';
+            medHiddenInput.value = '';
+            return;
+        }
+        medTimer = setTimeout(function() {
+            let url = '/medicines/search/medicines/?q=' + encodeURIComponent(query);
+            const categoryId = catHiddenInput.value;
+            if (categoryId) url += '&category_id=' + categoryId;
+
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    medResultsDiv.innerHTML = '';
+                    if (data.results.length === 0) {
+                        medResultsDiv.style.display = 'none';
+                        return;
+                    }
+                    data.results.forEach(function(med) {
+                        const item = document.createElement('a');
+                        item.href = '#';
+                        item.className = 'list-group-item list-group-item-action';
+                        item.textContent = med.name;
+                        item.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            medSearchInput.value = med.name;
+                            medHiddenInput.value = med.id;
+                            medResultsDiv.style.display = 'none';
+                        });
+                        medResultsDiv.appendChild(item);
+                    });
+                    medResultsDiv.style.display = 'block';
+                });
+        }, 300);
+    });
+
+    medSearchInput.addEventListener('blur', function() {
+        setTimeout(function() { medResultsDiv.style.display = 'none'; }, 200);
+    });
+
+    medSearchInput.addEventListener('focus', function() {
+        if (medResultsDiv.children.length > 0) medResultsDiv.style.display = 'block';
+    });
+
+    medSearchInput.addEventListener('keyup', function() {
+        if (!this.value.trim()) medHiddenInput.value = '';
+    });
+});
+</script>
 {% endblock %}

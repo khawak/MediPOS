@@ -58,10 +58,25 @@ class StockInForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        """Initialize crispy-forms helper and filter medicine queryset to active only."""
+        """Initialize crispy-forms helper and set medicine queryset."""
         super().__init__(*args, **kwargs)
-        # Filter medicine queryset to active medicines only
-        self.fields['medicine'].queryset = Medicine.objects.filter(is_active=True)
+        # On GET (new): empty queryset — medicine chosen via AJAX search.
+        # On GET (edit): queryset of the existing medicine only.
+        # On POST: widen to the submitted PK so validation passes.
+        if args and args[0]:
+            submitted_id = args[0].get('medicine')
+            if submitted_id:
+                self.fields['medicine'].queryset = Medicine.objects.filter(
+                    pk=submitted_id
+                )
+            else:
+                self.fields['medicine'].queryset = Medicine.objects.none()
+        elif self.instance and self.instance.pk:
+            self.fields['medicine'].queryset = Medicine.objects.filter(
+                pk=self.instance.medicine_id
+            )
+        else:
+            self.fields['medicine'].queryset = Medicine.objects.none()
         self.fields['medicine'].widget.attrs.update({'class': 'form-select'})
         self.fields['supplier'].widget.attrs.update({'class': 'form-select'})
 
@@ -92,7 +107,7 @@ class StockAdjustmentForm(forms.Form):
     ]
 
     medicine = forms.ModelChoiceField(
-        queryset=Medicine.objects.filter(is_active=True),
+        queryset=Medicine.objects.none(),
         label=_('Medicine'),
         help_text=_('Select the medicine to adjust.'),
         widget=forms.Select(attrs={'class': 'form-select'}),
@@ -124,8 +139,16 @@ class StockAdjustmentForm(forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
-        """Initialize crispy-forms helper with Bootstrap 5."""
+        """Initialize crispy-forms helper and set medicine queryset."""
         super().__init__(*args, **kwargs)
+        # On POST, widen queryset to the submitted PK so validation passes.
+        # On GET, keep empty — medicine is chosen via AJAX search widget.
+        if args and args[0]:
+            submitted_id = args[0].get('medicine')
+            if submitted_id:
+                self.fields['medicine'].queryset = Medicine.objects.filter(
+                    pk=submitted_id, is_active=True
+                )
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.template_pack = 'bootstrap5'

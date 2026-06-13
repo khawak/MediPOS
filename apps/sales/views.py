@@ -408,17 +408,17 @@ class MedicineSearchView(LoginRequiredMixin, View):
 
         medicines = Medicine.objects.filter(is_active=True).filter(
             Q(name__icontains=query)
-            | Q(generic_name__icontains=query)
+            | Q(generic_name__name__icontains=query)
             | Q(brand__icontains=query)
             | Q(barcode__icontains=query)
-        ).select_related('category')[:30]
+        ).select_related('category', 'generic_name')[:30]
 
         results = []
         for med in medicines:
             results.append({
                 'id': med.pk,
                 'name': med.name,
-                'generic_name': med.generic_name,
+                'generic_name': med.generic_name.name if med.generic_name else '',
                 'brand': med.brand,
                 'barcode': med.barcode or '',
                 'selling_price': str(med.selling_price),

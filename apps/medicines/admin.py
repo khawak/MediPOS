@@ -51,8 +51,9 @@ class MedicineAdmin(admin.ModelAdmin):
         'is_active',
     )
     list_display_links = ('name',)
-    search_fields = ('name', 'generic_name', 'brand', 'barcode')
+    search_fields = ('name', 'generic_name__name', 'brand', 'barcode')
     list_filter = ('category', 'is_active')
+    list_per_page = 50
     readonly_fields = ('stock_quantity',)
     ordering = ('name',)
     fieldsets = (

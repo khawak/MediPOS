@@ -68,6 +68,15 @@
         transform: translateY(-50%);
         display: none;
     }
+    /* Dark mode — dropdown text colour */
+    .medicine-search-wrapper .dropdown-item,
+    .supplier-search-wrapper .dropdown-item {
+        color: var(--bs-body-color);
+    }
+    .medicine-search-wrapper .dropdown-item .med-meta,
+    .supplier-search-wrapper .dropdown-item .med-meta {
+        color: var(--bs-secondary-color);
+    }
 </style>
 {% endblock %}
 
@@ -99,12 +108,12 @@
                     <form method="post" novalidate>
                         {% csrf_token %}
 
-                        {# Hidden real select — keeps Django form binding intact #}
+                        {# Hidden real select — kept empty; value injected by AJAX search widget #}
                         <select name="{{ form.medicine.html_name }}" id="{{ form.medicine.id_for_label }}" style="display:none;" tabindex="-1">
                             <option value="">---------</option>
-                            {% for med in form.medicine.field.queryset %}
-                                <option value="{{ med.pk }}" {% if form.medicine.value|stringformat:"s" == med.pk|stringformat:"s" %}selected{% endif %}>{{ med.name }}</option>
-                            {% endfor %}
+                            {% if form.instance.pk %}
+                                <option value="{{ form.instance.medicine.pk }}" selected>{{ form.instance.medicine.name }}</option>
+                            {% endif %}
                         </select>
 
                         <div class="row g-3">
@@ -130,7 +139,7 @@
                                 </div>
 
                                 <div class="mb-3 d-none" id="selectedMedicineInfo">
-                                    <div class="d-flex align-items-center gap-2 p-2 bg-light rounded border">
+                                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background-color: var(--bs-tertiary-bg);">
                                         <i class="bi bi-check-circle-fill text-success"></i>
                                         <div>
                                             <strong id="selectedMedName"></strong>
@@ -170,7 +179,7 @@
                                 </div>
 
                                 <div class="mb-3 d-none" id="selectedSupplierInfo">
-                                    <div class="d-flex align-items-center gap-2 p-2 bg-light rounded border">
+                                    <div class="d-flex align-items-center gap-2 p-2 rounded border" style="background-color: var(--bs-tertiary-bg);">
                                         <i class="bi bi-check-circle-fill text-success"></i>
                                         <div>
                                             <strong id="selectedSupplierName"></strong>

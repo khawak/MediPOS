@@ -15,9 +15,8 @@ from io import BytesIO
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, F, Q, Sum
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse
 from django.shortcuts import redirect
-from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 
@@ -52,10 +51,7 @@ class StaffAccessMixin(LoginRequiredMixin):
                 _('You do not have permission to access reports. '
                   'Please contact an administrator.'),
             )
-            return HttpResponseForbidden(
-                '<h1>403 Forbidden</h1><p>Reports are restricted to '
-                'Admin and Pharmacist roles.</p>'
-            )
+            return redirect('dashboard')
         return super().dispatch(request, *args, **kwargs)
 
 

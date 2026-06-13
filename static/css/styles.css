@@ -64,7 +64,7 @@ body {
     scrollbar-color: rgba(0,0,0,0.18) transparent;
 }
 
-/* Sidebar scrollbar — always light-on-dark (sidebar has dark bg in both themes) */
+/* Sidebar scrollbar — always dark sidebar */
 .sidebar-nav::-webkit-scrollbar-thumb {
     background: rgba(255,255,255,0.18);
 }
@@ -103,6 +103,8 @@ body {
     height: 100vh;
     position: sticky;
     top: 0;
+    background-color: #212529;
+    color: #ffffff;
 }
 
 /* Enable vertical scroll on sidebar nav when items overflow */
@@ -134,21 +136,22 @@ body {
 /* ── Material Navigation Items ───────────────────────────────────── */
 .sidebar .nav-link {
     border-radius: var(--m-radius-md);
-    padding: 0.6rem 0.85rem;
+    padding: 0.4rem 0.85rem;
     margin-bottom: 2px;
     color: rgba(255,255,255,0.75);
-    font-size: 0.875rem;
+    font-size: 0.80rem;
     font-weight: 500;
     letter-spacing: 0.2px;
     transition: all var(--m-transition);
     position: relative;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
 .sidebar .nav-link i {
     font-size: 1.15rem;
     width: 1.5rem;
     text-align: center;
-    opacity: 0.7;
+    opacity: 0.85;
     transition: opacity var(--m-transition);
 }
 
@@ -189,6 +192,15 @@ body {
     justify-content: center;
 }
 
+.sidebar.collapsed .sidebar-header h5 {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-logo {
+    width: 28px;
+    height: 28px;
+}
+
 .sidebar.collapsed .sidebar-header h4 {
     font-size: 0;
 }
@@ -207,6 +219,77 @@ body {
     font-size: 1rem;
     margin-right: 0 !important;
     vertical-align: middle;
+}
+
+/* Sidebar brand link */
+.sidebar-brand {
+    color: #ffffff;
+}
+
+.sidebar-logo {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: var(--m-radius-sm);
+}
+
+/* Sidebar close button (mobile) */
+.sidebar-close-btn {
+    color: rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: var(--m-radius-sm);
+}
+
+/* Sidebar sub-menu */
+.sidebar .nav-link.nav-link-sub {
+    font-size: 0.78rem;
+    padding: 0.2rem 0.6rem;
+    color: rgba(255,255,255,0.55);
+    border-radius: var(--m-radius-sm);
+    margin-bottom: 1px;
+    font-weight: 400;
+    letter-spacing: 0.1px;
+    border-bottom: none;
+}
+
+.sidebar .nav-link.nav-link-sub:hover {
+    background-color: rgba(255,255,255,0.1);
+    color: #fff;
+}
+
+.sidebar .nav-link.nav-link-sub.active {
+    background-color: rgba(255,255,255,0.15);
+    color: #fff;
+    font-weight: 600;
+}
+
+.sidebar .nav-link.nav-link-sub i {
+    font-size: 0.9rem;
+    width: 1.1rem;
+    text-align: center;
+    opacity: 0.75;
+}
+
+/* Chevron rotates when submenu is open */
+.nav-link[aria-expanded="true"] .sidebar-chevron {
+    transform: rotate(180deg);
+}
+
+.sidebar-chevron {
+    transition: transform var(--m-transition);
+    opacity: 0.3;
+    font-size: 0.60rem;
+}
+
+/* Collapsed sidebar — hide submenus entirely */
+.sidebar.collapsed #medicines-submenu,
+.sidebar.collapsed #inventory-submenu {
+    display: none !important;
+}
+
+.sidebar-close-btn:hover {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
 }
 
 /* Sidebar footer */
@@ -658,9 +741,6 @@ body {
 }
 
 /* ── Dark Mode Globals ────────────────────────────────────────────── */
-[data-bs-theme="dark"] .sidebar {
-    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-}
 
 [data-bs-theme="dark"] .dropdown-menu {
     background-color: #2c2c2c;
@@ -687,6 +767,14 @@ body {
 
 /* ── Print Styles ─────────────────────────────────────────────────── */
 @media print {
+    body,
+    html {
+        background: #fff !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
     .sidebar,
     .navbar,
     footer,
@@ -703,7 +791,25 @@ body {
         background: #fff !important;
     }
 
-    .table {
+    .card,
+    .card-body,
+    .container-fluid {
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    .table,
+    .table th,
+    .table td,
+    .table thead,
+    .table tbody,
+    .table-light,
+    .table-bordered {
+        background: #fff !important;
+        color: #000 !important;
+        --bs-table-bg: #fff !important;
+        --bs-table-color: #000 !important;
+        border-color: #fff !important;
         font-size: 0.85rem;
     }
 }
@@ -755,7 +861,7 @@ body {
     }
 }
 
-/* Report table headers � theme-aware */
+/* Report table headers � theme-aware */
 .table-report-header {
     background-color: #e9ecef;
     color: #212529;

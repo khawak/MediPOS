@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Generic Name — MediPOS{% endblock %}
+{% block page_title %}Delete Generic Name{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Confirm Deletion
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="lead">
+                    Are you sure you want to delete the generic name
+                    <strong>"{{ object.name }}"</strong>?
+                </p>
+
+                {% if linked_count > 0 %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-circle me-2"></i>
+                        <strong>Warning:</strong> <strong>{{ linked_count }}</strong> medicine(s) use this
+                        generic name. Deleting it will set their generic name to <em>None</em>.
+                    </div>
+                {% else %}
+                    <div class="alert alert-secondary">
+                        <i class="bi bi-info-circle me-2"></i>
+                        No medicines are currently using this generic name.
+                    </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between mt-3">
+                        <a href="{% url 'medicines:generic_name_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i> Delete Generic Name
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

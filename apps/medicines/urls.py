@@ -10,6 +10,28 @@ from . import views
 app_name = 'medicines'
 
 urlpatterns = [
+    # ── Generic Name URLs ───────────────────────────────────────────────────
+    path(
+        'generic-names/',
+        views.GenericNameListView.as_view(),
+        name='generic_name_list',
+    ),
+    path(
+        'generic-names/add/',
+        views.GenericNameCreateView.as_view(),
+        name='generic_name_add',
+    ),
+    path(
+        'generic-names/<int:pk>/edit/',
+        views.GenericNameUpdateView.as_view(),
+        name='generic_name_edit',
+    ),
+    path(
+        'generic-names/<int:pk>/delete/',
+        views.GenericNameDeleteView.as_view(),
+        name='generic_name_delete',
+    ),
+
     # ── Category URLs ───────────────────────────────────────────────────────
     path(
         'categories/',
@@ -40,6 +62,33 @@ urlpatterns = [
         'categories/template/download/',
         views.download_category_import_template,
         name='download_category_template',
+    ),
+
+    # ── AJAX Search ─────────────────────────────────────────────────────────────
+    path(
+        'search/generic-names/',
+        views.GenericNameSearchView.as_view(),
+        name='generic_name_search',
+    ),
+    path(
+        'search/categories/',
+        views.CategorySearchView.as_view(),
+        name='category_search',
+    ),
+    path(
+        'search/brands/',
+        views.BrandSearchView.as_view(),
+        name='brand_search',
+    ),
+    path(
+        'search/by-category/',
+        views.MedicinesByCategoryView.as_view(),
+        name='medicines_by_category',
+    ),
+    path(
+        'search/medicines/',
+        views.MedicineSearchView.as_view(),
+        name='medicine_search',
     ),
 
     # ── Medicine URLs ───────────────────────────────────────────────────────

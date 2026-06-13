@@ -58,6 +58,7 @@ class StockLedgerAdmin(admin.ModelAdmin):
     )
     search_fields = ('medicine__name',)
     list_filter = ('transaction_type',)
+    list_per_page = 25
     readonly_fields = (
         'medicine',
         'batch',

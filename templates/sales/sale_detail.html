@@ -111,7 +111,7 @@
                     <a href="{% url 'sales:invoice_print' sale.pk %}" class="btn btn-outline-secondary">
                         <i class="bi bi-printer me-1"></i> Print A4 Invoice
                     </a>
-                    <a href="{% url 'sales:invoice_thermal' sale.pk %}" class="btn btn-outline-dark">
+                    <a href="{% url 'sales:invoice_thermal' sale.pk %}" class="btn btn-outline-secondary">
                         <i class="bi bi-receipt me-1"></i> Print Thermal Receipt
                     </a>
                     {% if sale.status != 'CANCELLED' and sale.status != 'REFUNDED' %}

@@ -1,77 +1,421 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load crispy_forms_tags %}
 
-{% block title %}
-    {% if object %}Edit Medicine{% else %}Add Medicine{% endif %} — MediPOS
-{% endblock %}
+{% block title %}{% if object %}Edit Medicine{% else %}Add Medicine{% endif %} — MediPOS{% endblock %}
+{% block page_title %}{% if object %}Edit Medicine{% else %}Add Medicine{% endif %}{% endblock %}
 
-{% block page_title %}
-    {% if object %}Edit Medicine{% else %}Add Medicine{% endif %}
+{% block extra_css %}
+<style>
+    /* ── Search-box widget shared styles ─────────────────────────────── */
+    .field-search-wrapper { position: relative; }
+    .field-search-wrapper .search-dropdown {
+        position: absolute; top: 100%; left: 0; right: 0; z-index: 1055;
+        max-height: 240px; overflow-y: auto;
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 0 0 0.375rem 0.375rem;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        display: none;
+    }
+    .field-search-wrapper .search-dropdown.show { display: block; }
+    .field-search-wrapper .dropdown-item {
+        padding: 0.4rem 0.75rem; font-size: 0.875rem;
+        border-bottom: 1px solid var(--bs-border-color);
+        cursor: pointer; color: var(--bs-body-color);
+    }
+    .field-search-wrapper .dropdown-item:last-child { border-bottom: none; }
+    .field-search-wrapper .dropdown-item:hover,
+    .field-search-wrapper .dropdown-item.kbd-active { background-color: var(--bs-primary-bg-subtle); }
+    .field-search-wrapper .no-results {
+        padding: 0.4rem 0.75rem; font-size: 0.8rem;
+        color: var(--bs-secondary-color); text-align: center; font-style: italic;
+    }
+    .selected-badge {
+        display: flex; align-items: center; gap: 0.5rem;
+        padding: 0.3rem 0.65rem; margin-top: 0.25rem;
+        background-color: var(--bs-tertiary-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 0.375rem; font-size: 0.85rem;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-10">
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    {% if object %}
-                        <i class="bi bi-pencil me-2"></i>Edit Medicine: {{ object.name }}
-                    {% else %}
-                        <i class="bi bi-plus-circle me-2"></i>Add New Medicine
-                    {% endif %}
-                </h5>
+  <div class="col-lg-10">
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          {% if object %}
+            <i class="bi bi-pencil me-2"></i>Edit Medicine: {{ object.name }}
+          {% else %}
+            <i class="bi bi-plus-circle me-2"></i>Add New Medicine
+          {% endif %}
+        </h5>
+      </div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+
+          {# ── Hidden FK selects — Django form binding ───────────────────── #}
+          <select name="{{ form.generic_name.html_name }}" id="{{ form.generic_name.id_for_label }}" style="display:none;" tabindex="-1">
+            <option value="">---------</option>
+            {% for gn in form.generic_name.field.queryset %}
+              <option value="{{ gn.pk }}" {% if form.generic_name.value|stringformat:"s" == gn.pk|stringformat:"s" %}selected{% endif %}>{{ gn.name }}</option>
+            {% endfor %}
+          </select>
+          <select name="{{ form.category.html_name }}" id="{{ form.category.id_for_label }}" style="display:none;" tabindex="-1">
+            <option value="">---------</option>
+            {% for cat in form.category.field.queryset %}
+              <option value="{{ cat.pk }}" {% if form.category.value|stringformat:"s" == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+
+          <div class="row g-3">
+
+            {# ── LEFT COLUMN ──────────────────────────────────────────────── #}
+            <div class="col-md-6">
+              <h6 class="text-muted border-bottom pb-2 mb-3">
+                <i class="bi bi-info-circle me-1"></i>Basic Information
+              </h6>
+
+              {# Name — free text, autocomplete from existing medicine names #}
+              <div class="mb-3 field-search-wrapper" id="wrap-name">
+                <label class="form-label fw-semibold">
+                  {{ form.name.label }} <span class="text-danger">*</span>
+                </label>
+                <input type="text" id="input-name" name="{{ form.name.html_name }}"
+                       value="{{ form.name.value|default:'' }}"
+                       class="form-control {% if form.name.errors %}is-invalid{% endif %}"
+                       placeholder="Type medicine / trade name…" autocomplete="off">
+                <div class="search-dropdown" id="dropdown-name"></div>
+                {% if form.name.errors %}
+                  <div class="invalid-feedback d-block">{{ form.name.errors|join:", " }}</div>
+                {% endif %}
+              </div>
+
+              {# Generic Name — FK search #}
+              <div class="mb-3 field-search-wrapper" id="wrap-generic">
+                <label class="form-label fw-semibold">{{ form.generic_name.label }}</label>
+                <input type="text" id="input-generic"
+                       class="form-control {% if form.generic_name.errors %}is-invalid{% endif %}"
+                       placeholder="Search generic / INN name…" autocomplete="off">
+                <div class="search-dropdown" id="dropdown-generic"></div>
+                <div class="selected-badge d-none" id="badge-generic">
+                  <i class="bi bi-check-circle-fill text-success"></i>
+                  <span id="badge-generic-text" class="flex-grow-1"></span>
+                  <button type="button" class="btn btn-sm btn-link p-0 text-danger" id="clear-generic" title="Clear">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+                {% if form.generic_name.errors %}
+                  <div class="invalid-feedback d-block">{{ form.generic_name.errors|join:", " }}</div>
+                {% endif %}
+              </div>
+
+              {# Brand — free text with suggestions from existing brands #}
+              <div class="mb-3 field-search-wrapper" id="wrap-brand">
+                <label class="form-label fw-semibold">{{ form.brand.label }}</label>
+                <input type="text" id="input-brand" name="{{ form.brand.html_name }}"
+                       value="{{ form.brand.value|default:'' }}"
+                       class="form-control {% if form.brand.errors %}is-invalid{% endif %}"
+                       placeholder="Manufacturer / brand name…" autocomplete="off">
+                <div class="search-dropdown" id="dropdown-brand"></div>
+                {% if form.brand.errors %}
+                  <div class="invalid-feedback d-block">{{ form.brand.errors|join:", " }}</div>
+                {% endif %}
+              </div>
+
+              {# Category — FK search #}
+              <div class="mb-3 field-search-wrapper" id="wrap-category">
+                <label class="form-label fw-semibold">{{ form.category.label }}</label>
+                <input type="text" id="input-category"
+                       class="form-control {% if form.category.errors %}is-invalid{% endif %}"
+                       placeholder="Search category…" autocomplete="off">
+                <div class="search-dropdown" id="dropdown-category"></div>
+                <div class="selected-badge d-none" id="badge-category">
+                  <i class="bi bi-check-circle-fill text-success"></i>
+                  <span id="badge-category-text" class="flex-grow-1"></span>
+                  <button type="button" class="btn btn-sm btn-link p-0 text-danger" id="clear-category" title="Clear">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+                {% if form.category.errors %}
+                  <div class="invalid-feedback d-block">{{ form.category.errors|join:", " }}</div>
+                {% endif %}
+              </div>
+
+              {{ form.barcode|as_crispy_field }}
+              {{ form.unit|as_crispy_field }}
             </div>
-            <div class="card-body">
-                <form method="post" enctype="multipart/form-data" novalidate>
-                    {% csrf_token %}
 
-                    <!-- Two-column layout using Bootstrap grid -->
-                    <div class="row g-3">
-                        <!-- Left Column — Basic Info -->
-                        <div class="col-md-6">
-                            <h6 class="text-muted border-bottom pb-2 mb-3">
-                                <i class="bi bi-info-circle me-1"></i>Basic Information
-                            </h6>
-                            {{ form.name|as_crispy_field }}
-                            {{ form.generic_name|as_crispy_field }}
-                            {{ form.brand|as_crispy_field }}
-                            {{ form.category|as_crispy_field }}
-                            {{ form.barcode|as_crispy_field }}
-                            {{ form.unit|as_crispy_field }}
-                        </div>
+            {# ── RIGHT COLUMN ─────────────────────────────────────────────── #}
+            <div class="col-md-6">
+              <h6 class="text-muted border-bottom pb-2 mb-3">
+                <i class="bi bi-cash-stack me-1"></i>Pricing & Stock
+              </h6>
+              {{ form.purchase_price|as_crispy_field }}
+              {{ form.selling_price|as_crispy_field }}
+              {{ form.tax_rate|as_crispy_field }}
+              {{ form.reorder_level|as_crispy_field }}
 
-                        <!-- Right Column — Pricing & Stock -->
-                        <div class="col-md-6">
-                            <h6 class="text-muted border-bottom pb-2 mb-3">
-                                <i class="bi bi-cash-stack me-1"></i>Pricing & Stock
-                            </h6>
-                            {{ form.purchase_price|as_crispy_field }}
-                            {{ form.selling_price|as_crispy_field }}
-                            {{ form.tax_rate|as_crispy_field }}
-                            {{ form.reorder_level|as_crispy_field }}
-
-                            <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">
-                                <i class="bi bi-card-text me-1"></i>Additional Details
-                            </h6>
-                            {{ form.description|as_crispy_field }}
-                            {{ form.is_active|as_crispy_field }}
-                            {{ form.image|as_crispy_field }}
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-between mt-4 pt-3 border-top">
-                        <a href="{% url 'medicines:medicine_list' %}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-left me-1"></i> Back to Medicines
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>
-                            {% if object %}Update Medicine{% else %}Save Medicine{% endif %}
-                        </button>
-                    </div>
-                </form>
+              <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">
+                <i class="bi bi-card-text me-1"></i>Additional Details
+              </h6>
+              {{ form.description|as_crispy_field }}
+              {{ form.is_active|as_crispy_field }}
+              {{ form.image|as_crispy_field }}
             </div>
-        </div>
+
+          </div>{# /row #}
+
+          <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+            <a href="{% url 'medicines:medicine_list' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left me-1"></i> Back to Medicines
+            </a>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg me-1"></i>
+              {% if object %}Update Medicine{% else %}Save Medicine{% endif %}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+'use strict';
+
+// ── Utility ──────────────────────────────────────────────────────────────────
+function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
+
+function debounce(fn, ms) {
+    let t;
+    return function(...args) { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// ── Generic dropdown builder ─────────────────────────────────────────────────
+// Creates a reusable search-box controller.
+// opts.url      — fetch endpoint (?q=…), returns {results:[{id?,name}]}
+// opts.input    — the visible text input element
+// opts.dropdown — the .search-dropdown element
+// opts.onSelect — called with the chosen result object
+// opts.freeText — if true, typing is itself the value (no mandatory selection)
+function makeSearchBox(opts) {
+    const { input, dropdown, onSelect, url, freeText } = opts;
+    let results = [], kbdIdx = -1;
+
+    function render(list) {
+        results = list; kbdIdx = -1;
+        dropdown.innerHTML = '';
+        if (!list.length) {
+            dropdown.innerHTML = '<div class="no-results">No results found</div>';
+        } else {
+            list.forEach(function(r, i) {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.setAttribute('role', 'option');
+                item.innerHTML = esc(r.name);
+                item.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    pick(i);
+                });
+                dropdown.appendChild(item);
+            });
+        }
+        dropdown.classList.add('show');
+    }
+
+    function close() { dropdown.classList.remove('show'); kbdIdx = -1; }
+
+    function pick(i) {
+        const r = results[i];
+        if (!r) return;
+        input.value = r.name;
+        onSelect(r);
+        close();
+    }
+
+    function highlightKbd() {
+        dropdown.querySelectorAll('.dropdown-item').forEach(function(el, i) {
+            el.classList.toggle('kbd-active', i === kbdIdx);
+            if (i === kbdIdx) el.scrollIntoView({ block: 'nearest' });
+        });
+    }
+
+    const doSearch = debounce(async function(q) {
+        if (!q) { close(); return; }
+        try {
+            const resp = await fetch(url + '?q=' + encodeURIComponent(q));
+            const data = await resp.json();
+            render(data.results || []);
+        } catch(e) { close(); }
+    }, 250);
+
+    input.addEventListener('input', function() {
+        if (freeText && opts.onType) opts.onType(input.value);
+        doSearch(input.value.trim());
+    });
+    input.addEventListener('keydown', function(e) {
+        const items = dropdown.querySelectorAll('.dropdown-item');
+        if (!items.length || !dropdown.classList.contains('show')) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); kbdIdx = Math.min(kbdIdx+1, items.length-1); highlightKbd(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); kbdIdx = Math.max(kbdIdx-1, 0); highlightKbd(); }
+        else if (e.key === 'Enter') { e.preventDefault(); if (kbdIdx >= 0) pick(kbdIdx); }
+        else if (e.key === 'Escape') close();
+    });
+    document.addEventListener('click', function(e) {
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) close();
+    });
+
+    return { close };
+}
+
+// ── 1. NAME — free text, autocomplete from existing medicine names ────────────
+(function() {
+    const input    = document.getElementById('input-name');
+    const dropdown = document.getElementById('dropdown-name');
+    const doSearch = debounce(async function(q) {
+        dropdown.innerHTML = '';
+        dropdown.classList.remove('show');
+        if (!q) return;
+        try {
+            const resp = await fetch('/sales/pos/medicine-search/?q=' + encodeURIComponent(q));
+            const data = await resp.json();
+            // Deduplicate names
+            const names = [];
+            (data.medicines || []).forEach(function(m) {
+                if (!names.includes(m.name)) names.push(m.name);
+            });
+            if (!names.length) return;
+            names.slice(0, 20).forEach(function(name) {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.textContent = name;
+                item.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    input.value = name;
+                    dropdown.classList.remove('show');
+                });
+                dropdown.appendChild(item);
+            });
+            dropdown.classList.add('show');
+        } catch(e) {}
+    }, 250);
+
+    input.addEventListener('input', function() { doSearch(input.value.trim()); });
+    document.addEventListener('click', function(e) {
+        if (!input.contains(e.target) && !dropdown.contains(e.target))
+            dropdown.classList.remove('show');
+    });
+})();
+
+// ── 2. GENERIC NAME — FK search ──────────────────────────────────────────────
+(function() {
+    const input      = document.getElementById('input-generic');
+    const dropdown   = document.getElementById('dropdown-generic');
+    const hidden     = document.getElementById('{{ form.generic_name.id_for_label }}');
+    const badge      = document.getElementById('badge-generic');
+    const badgeText  = document.getElementById('badge-generic-text');
+    const clearBtn   = document.getElementById('clear-generic');
+
+    function select(r) {
+        hidden.value      = r.id;
+        input.value       = '';
+        badgeText.textContent = r.name;
+        badge.classList.remove('d-none');
+        input.placeholder = 'Selected: ' + r.name;
+    }
+
+    function clear() {
+        hidden.value = '';
+        input.value = '';
+        input.placeholder = 'Search generic / INN name…';
+        badgeText.textContent = '';
+        badge.classList.add('d-none');
+        input.focus();
+    }
+
+    makeSearchBox({
+        input, dropdown,
+        url: '{% url "medicines:generic_name_search" %}',
+        onSelect: select,
+    });
+
+    clearBtn.addEventListener('click', clear);
+
+    // Pre-populate if editing
+    const preId = hidden.value;
+    if (preId) {
+        const opt = hidden.querySelector('option[value="' + preId + '"]');
+        if (opt) select({ id: preId, name: opt.textContent.trim() });
+    }
+})();
+
+// ── 3. BRAND — free text, autocomplete suggestions ───────────────────────────
+(function() {
+    const input    = document.getElementById('input-brand');
+    const dropdown = document.getElementById('dropdown-brand');
+
+    makeSearchBox({
+        input, dropdown,
+        url: '{% url "medicines:brand_search" %}',
+        freeText: true,
+        onSelect: function(r) { input.value = r.name; },
+    });
+})();
+
+// ── 4. CATEGORY — FK search ──────────────────────────────────────────────────
+(function() {
+    const input      = document.getElementById('input-category');
+    const dropdown   = document.getElementById('dropdown-category');
+    const hidden     = document.getElementById('{{ form.category.id_for_label }}');
+    const badge      = document.getElementById('badge-category');
+    const badgeText  = document.getElementById('badge-category-text');
+    const clearBtn   = document.getElementById('clear-category');
+
+    function select(r) {
+        hidden.value = r.id;
+        input.value  = '';
+        badgeText.textContent = r.name;
+        badge.classList.remove('d-none');
+        input.placeholder = 'Selected: ' + r.name;
+    }
+
+    function clear() {
+        hidden.value = '';
+        input.value  = '';
+        input.placeholder = 'Search category…';
+        badgeText.textContent = '';
+        badge.classList.add('d-none');
+        input.focus();
+    }
+
+    makeSearchBox({
+        input, dropdown,
+        url: '{% url "medicines:category_search" %}',
+        onSelect: select,
+    });
+
+    clearBtn.addEventListener('click', clear);
+
+    // Pre-populate if editing
+    const preId = hidden.value;
+    if (preId) {
+        const opt = hidden.querySelector('option[value="' + preId + '"]');
+        if (opt) select({ id: preId, name: opt.textContent.trim() });
+    }
+})();
+
+})();
+</script>
 {% endblock %}

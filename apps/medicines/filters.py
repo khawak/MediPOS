@@ -7,7 +7,7 @@ import django_filters
 from django.db.models import F, Q
 from django.utils.translation import gettext_lazy as _
 
-from .models import Category, Medicine
+from .models import Category, GenericName, Medicine
 
 
 class MedicineFilter(django_filters.FilterSet):
@@ -39,6 +39,13 @@ class MedicineFilter(django_filters.FilterSet):
         widget=django_filters.widgets.forms.Select(attrs={'class': 'form-select'}),
     )
 
+    generic_name = django_filters.ModelChoiceFilter(
+        queryset=GenericName.objects.all(),
+        empty_label=_('All Generic Names'),
+        label=_('Generic Name'),
+        widget=django_filters.widgets.forms.Select(attrs={'class': 'form-select'}),
+    )
+
     is_active = django_filters.BooleanFilter(
         method='filter_active',
         label=_('Active Only'),
@@ -53,7 +60,7 @@ class MedicineFilter(django_filters.FilterSet):
 
     class Meta:
         model = Medicine
-        fields = ['search', 'category', 'is_active', 'low_stock']
+        fields = ['search', 'category', 'generic_name', 'is_active', 'low_stock']
 
     def filter_active(self, queryset, name, value):
         """
@@ -83,7 +90,7 @@ class MedicineFilter(django_filters.FilterSet):
             return queryset
         query = (
             Q(name__icontains=value)
-            | Q(generic_name__icontains=value)
+            | Q(generic_name__name__icontains=value)
             | Q(brand__icontains=value)
             | Q(barcode__icontains=value)
         )
